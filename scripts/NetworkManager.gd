@@ -4,7 +4,16 @@ var maxClients: int = 20
 var peer: ENetMultiplayerPeer
 var defaultPort: int = 25566
 
+func _exit_tree() -> void:
+	if multiplayer.multiplayer_peer and not multiplayer.is_server():
+		print("Disconnecting from server...")
+		multiplayer.multiplayer_peer.disconnect_peer(1)
+		multiplayer.multiplayer_peer = null
+
 func _ready() -> void:
+	multiplayer.connection_failed.connect(connectionFailed)
+	multiplayer.server_disconnected.connect(serverDisconnected)
+
 	if OS.has_feature("dedicated_server"):
 		var port = defaultPort
 		var args = OS.get_cmdline_args()
@@ -26,3 +35,11 @@ func startServer(port: int) -> void:
 	peer.create_server(port, maxClients)
 	multiplayer.multiplayer_peer = peer
 	print("Server started on port %d" % port)
+	
+func connectionFailed() -> void:
+	print("Connection failed")
+	multiplayer.multiplayer_peer = null
+
+func serverDisconnected() -> void:
+	print("Disconnected from server")
+	multiplayer.multiplayer_peer = null
