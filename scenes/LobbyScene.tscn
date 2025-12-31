@@ -31,20 +31,25 @@ grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="IPLabel" type="Label" parent="VBoxContainer"]
 layout_mode = 2
 text = "ENTER SERVER IP:"
+horizontal_alignment = 1
 
-[node name="IpInput" type="LineEdit" parent="VBoxContainer"]
+[node name="IPInput" type="LineEdit" parent="VBoxContainer"]
+layout_mode = 2
+
+[node name="PortLabel" type="Label" parent="VBoxContainer"]
+layout_mode = 2
+text = "ENTER SERVER PORT:"
+horizontal_alignment = 1
+
+[node name="PortInput" type="LineEdit" parent="VBoxContainer"]
 layout_mode = 2
 
 [node name="JoinButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 text = "JOIN"
-
-[node name="HostButton" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-text = "HOST"
 
 [node name="TouchButtons" type="CanvasLayer" parent="."]
 
@@ -73,4 +78,3 @@ texture_normal = ExtResource("5_or8ps")
 action = "ui_down"
 
 [connection signal="pressed" from="VBoxContainer/JoinButton" to="." method="_on_join_button_pressed"]
-[connection signal="pressed" from="VBoxContainer/HostButton" to="." method="_on_host_button_pressed"]
