@@ -3,6 +3,7 @@ extends Node
 var maxClients: int = 20
 var peer: ENetMultiplayerPeer
 var defaultPort: int = 25566
+var connectedPlayers: Dictionary = {}
 
 func _exit_tree() -> void:
 	if multiplayer.multiplayer_peer and not multiplayer.is_server():
@@ -15,6 +16,8 @@ func _ready() -> void:
 	multiplayer.server_disconnected.connect(serverDisconnected)
 
 	if OS.has_feature("dedicated_server"):
+		multiplayer.peer_connected.connect(peerConnected)
+		multiplayer.peer_disconnected.connect(peerDisconnected)
 		var port = defaultPort
 		var args = OS.get_cmdline_args()
 		
@@ -42,3 +45,13 @@ func connectionFailed() -> void:
 func serverDisconnected() -> void:
 	print("Disconnected from server")
 	multiplayer.multiplayer_peer = null
+	
+func peerConnected(id: int) -> void:
+	connectedPlayers[id] = {}
+	print("Player connected:", id)
+	print("Total players:", connectedPlayers.size())
+
+func peerDisconnected(id: int) -> void:
+	connectedPlayers.erase(id)
+	print("Player disconnected:", id)
+	print("Total players:", connectedPlayers.size())
