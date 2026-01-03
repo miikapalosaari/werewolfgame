@@ -17,7 +17,6 @@ func _ready() -> void:
 	if OS.has_feature("dedicated_server"):
 		var port = defaultPort
 		var args = OS.get_cmdline_args()
-		print("CLI args:", args)
 		
 		for i in range(args.size()):
 			if args[i] == "--port" and i + 1 < args.size():

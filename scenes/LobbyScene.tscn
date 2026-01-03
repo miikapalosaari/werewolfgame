@@ -1,10 +1,6 @@
-[gd_scene load_steps=6 format=3 uid="uid://bno6v5u83fy4k"]
+[gd_scene load_steps=2 format=3 uid="uid://bno6v5u83fy4k"]
 
 [ext_resource type="Script" path="res://scripts/Lobby.gd" id="1_o73ge"]
-[ext_resource type="Texture2D" uid="uid://cle4i1vm5sysj" path="res://images/Right.png" id="2_p8g1e"]
-[ext_resource type="Texture2D" uid="uid://hwr7wymeqfag" path="res://images/Left.png" id="3_a8ut2"]
-[ext_resource type="Texture2D" uid="uid://ctdwniwaie23f" path="res://images/Up.png" id="4_aen55"]
-[ext_resource type="Texture2D" uid="uid://cyjsk20ockht3" path="res://images/Down.png" id="5_or8ps"]
 
 [node name="LobbyScene" type="Control"]
 layout_mode = 3
@@ -50,31 +46,5 @@ layout_mode = 2
 [node name="JoinButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 text = "JOIN"
-
-[node name="TouchButtons" type="CanvasLayer" parent="."]
-
-[node name="TouchRight" type="TouchScreenButton" parent="TouchButtons"]
-position = Vector2(158, 415)
-scale = Vector2(4, 4)
-texture_normal = ExtResource("2_p8g1e")
-action = "ui_right"
-
-[node name="TouchLeft" type="TouchScreenButton" parent="TouchButtons"]
-position = Vector2(31, 414)
-scale = Vector2(4, 4)
-texture_normal = ExtResource("3_a8ut2")
-action = "ui_left"
-
-[node name="TouchUp" type="TouchScreenButton" parent="TouchButtons"]
-position = Vector2(126, 265)
-scale = Vector2(4, 4)
-texture_normal = ExtResource("4_aen55")
-action = "ui_up"
-
-[node name="TouchDown" type="TouchScreenButton" parent="TouchButtons"]
-position = Vector2(97, 476)
-scale = Vector2(4, 4)
-texture_normal = ExtResource("5_or8ps")
-action = "ui_down"
 
 [connection signal="pressed" from="VBoxContainer/JoinButton" to="." method="_on_join_button_pressed"]
