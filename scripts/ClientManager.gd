@@ -1,14 +1,14 @@
 extends Node
 
-var localGameState: Dictionary = {}
+var localState: Dictionary = {}
 
 # Called when the server sends a full or partial game state update
 @rpc("authority", "call_remote")
-func updateState(newGameState: Dictionary):
-	print("ClientManager: Received new game state")
-	localGameState = newGameState
+func updateState(newState: Dictionary):
+	print("ClientManager: Received new state")
+	localState = newState
 
 	# Forward to the active scene if it has a handler
 	var scene = get_tree().current_scene
-	if scene and scene.has_method("applyGameState"):
-		scene.applyGameState(newGameState)
+	if scene and scene.has_method("applyState"):
+		scene.applyState(newState)
