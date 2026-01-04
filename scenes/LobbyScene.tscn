@@ -27,24 +27,8 @@ grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="IPLabel" type="Label" parent="VBoxContainer"]
+[node name="ReadyButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
-text = "ENTER SERVER IP:"
-horizontal_alignment = 1
+text = "Ready"
 
-[node name="IPInput" type="LineEdit" parent="VBoxContainer"]
-layout_mode = 2
-
-[node name="PortLabel" type="Label" parent="VBoxContainer"]
-layout_mode = 2
-text = "ENTER SERVER PORT:"
-horizontal_alignment = 1
-
-[node name="PortInput" type="LineEdit" parent="VBoxContainer"]
-layout_mode = 2
-
-[node name="JoinButton" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-text = "JOIN"
-
-[connection signal="pressed" from="VBoxContainer/JoinButton" to="." method="_on_join_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/ReadyButton" to="." method="_on_ready_button_pressed"]
