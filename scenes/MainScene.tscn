@@ -1,9 +1,11 @@
-[gd_scene load_steps=3 format=3 uid="uid://l5k83pb0rcsy"]
+[gd_scene load_steps=4 format=3 uid="uid://l5k83pb0rcsy"]
 
+[ext_resource type="Script" path="res://scripts/MainScene.gd" id="1_awaa0"]
 [ext_resource type="Script" path="res://scripts/PlayerSpawner.gd" id="2_0cxmt"]
 [ext_resource type="PackedScene" uid="uid://c0hrdf8eni5qm" path="res://scenes/Player.tscn" id="3_recnk"]
 
 [node name="MainScene" type="Node2D"]
+script = ExtResource("1_awaa0")
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("res://scenes/Player.tscn")

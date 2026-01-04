@@ -1,11 +1,12 @@
 extends Node
 
-var playersReady: Dictionary = {} 
+var playersReady: Dictionary = {}
+var serverGameState: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
 		return
-	print("MainScene loaded...")
+	print("GameManager loaded")
 	
 	RolesManager.loadAllRoles()
 	print("Found Roles:")
@@ -14,9 +15,11 @@ func _ready() -> void:
 		var role = RolesManager.roles[key]
 		print("ID:", role["id"])
 
-func _process(delta: float) -> void:
-	pass
-	
+@rpc("any_peer")
+func requestFullState():
+	var peerID = multiplayer.get_remote_sender_id()
+	ClientManager.rpc_id(peerID, "updateState", serverGameState)
+
 @rpc("any_peer", "call_remote")
 func playerReady():
 	var peerID = multiplayer.get_remote_sender_id()
@@ -24,12 +27,13 @@ func playerReady():
 	print("Player ready:", peerID)
 	checkIfAllReady()
 
-func checkIfAllReady():
-	if playersReady.size() == multiplayer.get_peers().size():
-		print("All players ready, starting game")
-		rpc("startGame")
-
 @rpc("any_peer")
 func startGame():
 	if not OS.has_feature("dedicated_server"):
 		get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
+
+func checkIfAllReady():
+	if playersReady.size() == multiplayer.get_peers().size():
+		print("All players ready, starting game")
+		rpc("startGame")
+		
