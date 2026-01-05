@@ -3,7 +3,7 @@ extends Node
 var localState: Dictionary = {}
 
 # Called when the server sends a full or partial game state update
-@rpc("authority", "call_remote")
+@rpc("any_peer", "call_remote")
 func updateState(newState: Dictionary):
 	print("ClientManager: Received new state")
 	localState = newState

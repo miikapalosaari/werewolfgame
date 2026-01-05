@@ -1,86 +1,124 @@
 extends Node
 
-var serverGameState: Dictionary = {
-	"players": {},
-	"roles": {},
-	"phase": "lobby",
-	"round": 0
+enum GamePhase {
+	LOBBY,
+	STARTING,
+	NIGHT,
+	DAY,
+	VOTING,
+	ENDED
 }
 
-var lobbyState: Dictionary = {
-	"players": {},
-	"leader": null
-}
+var currentPhase: GamePhase = GamePhase.LOBBY
+var currentRound: int = 0
+var players: Dictionary = {}
+var lobbyLeader: int = -1
+
+var roles: Dictionary = {}
+var pendingActions: Array = []
+var votes: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
 		return
-	multiplayer.peer_connected.connect(playerConnected)
-	multiplayer.peer_disconnected.connect(playerDisconnected)
+	
+	NetworkManager.playerConnected.connect(onPlayerConnected)
+	NetworkManager.playerDisconnected.connect(onPlayerDisconnected)
 	print("GameManager loaded")
 	
-	RolesManager.loadAllRoles()
+	roles = RolesManager.loadAllRoles()
 	print("Found Roles:")
 	
-	for key in RolesManager.roles.keys():
-		var role = RolesManager.roles[key]
+	for key in roles.keys():
+		var role = roles[key]
 		print("ID:", role["id"])
 
-# RPC : Client requests full state
+# RPC : Client can request full state
 @rpc("any_peer")
 func requestFullState():
 	var peerID = multiplayer.get_remote_sender_id()
-	if serverGameState["phase"] == "lobby":
-		ClientManager.rpc_id(peerID, "updateState", lobbyState)
-	else:
-		ClientManager.rpc_id(peerID, "updateState", serverGameState)
+	ClientManager.rpc_id(peerID, "updateState", buildStateSnapshot(peerID))
 
 # RPC : Client presses ready button
 @rpc("any_peer", "call_remote")
 func playerReady():
 	var peerID = multiplayer.get_remote_sender_id()
-	lobbyState["players"][peerID]["ready"] = true
+	if currentPhase != GamePhase.LOBBY:
+		return
+	if not players.has(peerID):
+		return
+		
+	players[peerID].ready = true
 	print("Player ready:", peerID)
-	broadcastLobbyState()
-	checkIfAllReady()
+	broadcastState()
+	if checkIfAllReady():
+		rpc("startGame")
 
 # RPC : Start game for clients
+#@rpc("authority", "call_remote")
 @rpc("any_peer")
 func startGame():
+	print("Starting game")
+	currentPhase = GamePhase.STARTING
+	currentRound = 1
 	if not OS.has_feature("dedicated_server"):
 		get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
+	broadcastState()
 		
-		
-func playerConnected(id) -> void:
-	lobbyState["players"][id] = {
-		"name": str(id),
+func onPlayerConnected(peerID) -> void:
+	print("Player connected (" + str(peerID) + ")")
+	players[peerID] = {
+		"name": str(peerID),
+		"role": "",
+		"alive": true,
 		"ready": false
 	}
 	
-	if lobbyState["leader"] == null:
-		lobbyState["leader"] = id
-	
-	broadcastLobbyState()
+	if lobbyLeader == -1:
+		lobbyLeader = peerID
+	broadcastState()
 
-func playerDisconnected(id) -> void:
-	lobbyState["players"].erase(id)
+func onPlayerDisconnected(peerID) -> void:
+	print("Player disconnected (" + str(peerID) + ")")
+	players.erase(peerID)
 	
-	if lobbyState["leader"] == id:
-		var peers = multiplayer.get_peers()
-		if peers.size() > 0:
-			lobbyState["leader"] = peers[0]
-		else:
-			lobbyState["leader"] = null
-	broadcastLobbyState()
-
-func checkIfAllReady():
-	for id in lobbyState["players"].keys():
-		if not lobbyState["players"][id]["ready"]:
-			return
-	print("All players ready, starting game")
-	rpc("startGame")
+	if peerID == lobbyLeader:
+		lobbyLeader = pickNewLeader()
 		
+	if players.is_empty():
+		resetGame()
+	else:
+		broadcastState()
 
-func broadcastLobbyState():
+func checkIfAllReady() -> bool:
+	for id in players.values():
+		if not id.ready:
+			return false
+	return true
+
+func buildStateSnapshot(peerID: int) -> Dictionary:
+	return {
+		"phase": currentPhase,
+		"round": currentRound,
+		"players": players,
+		"leader": lobbyLeader,
+		"selfID": peerID
+	}
+
+func broadcastState():
 	for peerID in multiplayer.get_peers():
-		ClientManager.rpc_id(peerID, "updateState", lobbyState)
+		ClientManager.rpc_id(peerID, "updateState", buildStateSnapshot(peerID))
+
+func resetGame() -> void:
+	currentPhase = GamePhase.LOBBY
+	currentRound = 0
+	players.clear()
+	lobbyLeader = -1
+	
+func pickNewLeader() -> int:
+	if players.is_empty():
+		return -1
+
+	var peerIDs := players.keys()
+	peerIDs.sort()
+	return peerIDs[0]

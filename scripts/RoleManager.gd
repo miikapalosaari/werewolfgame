@@ -2,13 +2,12 @@ extends Node
 
 class_name RoleManager
 
-var roles : Dictionary = {}
-
-func loadAllRoles() -> void:
+func loadAllRoles() -> Dictionary:
+	var roles : Dictionary = {}
 	var dir: DirAccess = DirAccess.open("res://roles")
 	if dir == null:
 		push_error("Could not open roles folder")
-		return
+		return roles
 		
 	dir.list_dir_begin()
 	var filename: String = dir.get_next()
@@ -28,3 +27,4 @@ func loadAllRoles() -> void:
 				file.close()
 		filename = dir.get_next()
 	dir.list_dir_end()
+	return roles
