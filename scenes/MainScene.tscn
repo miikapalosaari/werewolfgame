@@ -12,3 +12,7 @@ _spawnable_scenes = PackedStringArray("res://scenes/Player.tscn")
 spawn_path = NodePath("..")
 script = ExtResource("2_0cxmt")
 networkPlayer = ExtResource("3_recnk")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0

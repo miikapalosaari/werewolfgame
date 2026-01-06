@@ -41,8 +41,10 @@ func requestFullState():
 	ClientManager.rpc_id(peerID, "updateState", buildStateSnapshot(peerID))
 
 # RPC : Client presses ready button
-@rpc("any_peer", "call_remote")
+@rpc("any_peer")
 func playerReady():
+	if not multiplayer.is_server():
+		return
 	var peerID = multiplayer.get_remote_sender_id()
 	if currentPhase != GamePhase.LOBBY:
 		return
@@ -53,21 +55,32 @@ func playerReady():
 	print("Player ready:", peerID)
 	broadcastState()
 	if checkIfAllReady():
-		rpc("startGame")
+		startGame()
 
 # RPC : Start game for clients
 #@rpc("authority", "call_remote")
 @rpc("any_peer")
 func startGame():
+	if not multiplayer.is_server():
+		return
 	print("Starting game")
 	currentPhase = GamePhase.STARTING
 	currentRound = 1
-	if not OS.has_feature("dedicated_server"):
-		get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
+	assignRoles()
 	broadcastState()
-		
-@rpc("any_peer", "call_remote")
+	
+	rpc("clientStartGame")
+
+@rpc("any_peer")
+func clientStartGame():
+	if OS.has_feature("dedicated_server"):
+		return
+	get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
+
+@rpc("any_peer")
 func updateRoleCounts(newCounts: Dictionary):
+	if not multiplayer.is_server():
+		return
 	if multiplayer.get_remote_sender_id() != lobbyLeader:
 		print("Only lobby leader can update role counts")
 		return
@@ -108,11 +121,36 @@ func checkIfAllReady() -> bool:
 			return false
 	return true
 
+func canSeeRole(viewerID: int, targetID: int) -> bool:
+	var viewerRole = players[viewerID]["role"]
+	var targetRole = players[targetID]["role"]
+	
+	# If roles are not assigned yet or invalid, hide everything except yourself
+	if not roles.has(viewerRole) or not roles.has(targetRole):
+		return viewerID == targetID
+
+	# Everyone can see their own role
+	if viewerID == targetID:
+		return true
+
+	# If viewer's role has canSeeTeam enabled and has the same role as target:
+	if roles[viewerRole].get("canSeeTeam", false):
+		if viewerRole == targetRole:
+			return true
+	return false
+
 func buildStateSnapshot(peerID: int) -> Dictionary:
+	var filteredPlayers: Dictionary = {}
+	for id in players.keys():
+		var p = players[id].duplicate()
+		if not canSeeRole(peerID, id):
+			p["role"] = "hidden"
+		filteredPlayers[id] = p
+	
 	return {
 		"phase": currentPhase,
 		"round": currentRound,
-		"players": players,
+		"players": filteredPlayers,
 		"leader": lobbyLeader,
 		"roles": roles,
 		"roleCounts": roleCounts,
@@ -138,4 +176,18 @@ func pickNewLeader() -> int:
 	return peerIDs[0]
 
 func assignRoles() -> void:
+	print("Assigning roles:")
+	var rolePool: Array = []
+	for roleID in roleCounts.keys():
+		var count = roleCounts[roleID]
+		for i in range(count):
+			rolePool.append(roleID)
+			
+	rolePool.shuffle()
+	
 	var peerIDs = players.keys()
+	peerIDs.shuffle()
+	for i in range(min(peerIDs.size(), rolePool.size())):
+		var peerID = peerIDs[i]
+		players[peerID]["role"] = rolePool[i]
+		print("Assigned ", rolePool[i], " to ", peerID)
