@@ -17,6 +17,7 @@ var lobbyLeader: int = -1
 var roles: Dictionary = {}
 var pendingActions: Array = []
 var votes: Dictionary = {}
+var roleCounts: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -65,6 +66,17 @@ func startGame():
 		get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
 	broadcastState()
 		
+@rpc("any_peer", "call_remote")
+func updateRoleCounts(newCounts: Dictionary):
+	if multiplayer.get_remote_sender_id() != lobbyLeader:
+		print("Only lobby leader can update role counts")
+		return
+
+	roleCounts = newCounts
+	print("Updated role counts:", roleCounts)
+	broadcastState()
+
+		
 func onPlayerConnected(peerID) -> void:
 	print("Player connected (" + str(peerID) + ")")
 	players[peerID] = {
@@ -102,6 +114,8 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		"round": currentRound,
 		"players": players,
 		"leader": lobbyLeader,
+		"roles": roles,
+		"roleCounts": roleCounts,
 		"selfID": peerID
 	}
 
@@ -122,3 +136,6 @@ func pickNewLeader() -> int:
 	var peerIDs := players.keys()
 	peerIDs.sort()
 	return peerIDs[0]
+
+func assignRoles() -> void:
+	var peerIDs = players.keys()
