@@ -1,8 +1,8 @@
-extends Node2D
+extends Control
 
-var playerID: int
-var isAlive: bool = true
+@onready var colorRect: ColorRect = $ColorRect
+@onready var nameLabel: Label = $Label
 
-func _enter_tree() -> void:
-	playerID = name.to_int()
-	set_multiplayer_authority(playerID)
+func setup(name: String, color: Color):
+	nameLabel.text = name
+	colorRect.color = color
