@@ -149,3 +149,8 @@ func onPlayerSelected(peerID: int) -> void:
 
 	selectedPlayers.append(peerID)
 	$Label.text = str(selectedPlayers)
+
+@rpc("any_peer")
+func clientSendSelection():
+	print("Client: ", localState["selfID"], " is sending selection: ", selectedPlayers)
+	GameManager.rpc_id(1, "sendClientSelection", selectedPlayers)

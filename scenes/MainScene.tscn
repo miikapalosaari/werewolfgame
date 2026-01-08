@@ -32,3 +32,12 @@ offset_left = 936.0
 offset_top = 511.0
 offset_right = 976.0
 offset_bottom = 534.0
+
+[node name="DebugSendVotesButton" type="Button" parent="."]
+offset_left = 1213.0
+offset_top = 689.0
+offset_right = 1221.0
+offset_bottom = 697.0
+text = "SEND VOTES"
+
+[connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]

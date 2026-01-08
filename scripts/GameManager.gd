@@ -18,6 +18,8 @@ var roles: Dictionary = {}
 var pendingActions: Array = []
 var votes: Dictionary = {}
 var roleCounts: Dictionary = {}
+var clientSelections: Dictionary = {}
+var selectionTimer: Timer 
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -33,6 +35,13 @@ func _ready() -> void:
 	for key in roles.keys():
 		var role = roles[key]
 		print("ID:", role["id"])
+		
+	var t : Timer = Timer.new()
+	t.wait_time = 10.0
+	t.one_shot = true
+	add_child(t)
+	t.connect("timeout", Callable(self, "onSelectionTimerTimeout"))
+	selectionTimer = t
 
 # RPC : Client can request full state
 @rpc("any_peer")
@@ -56,9 +65,9 @@ func playerReady():
 	broadcastState()
 	if checkIfAllReady():
 		startGame()
+		selectionTimer.start()
 
 # RPC : Start game for clients
-#@rpc("authority", "call_remote")
 @rpc("any_peer")
 func startGame():
 	if not multiplayer.is_server():
@@ -191,3 +200,45 @@ func assignRoles() -> void:
 		var peerID = peerIDs[i]
 		players[peerID]["role"] = rolePool[i]
 		print("Assigned ", rolePool[i], " to ", peerID)
+
+@rpc("any_peer")
+func requestClientSelection():
+	if OS.has_feature("dedicated_server"):
+		return
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("clientSendSelection"):
+		scene.clientSendSelection()
+	else:
+		print("Client: no clientSendSelection() on current scene")
+
+@rpc("any_peer")
+func sendClientSelection(selection: Array):
+	if not multiplayer.is_server():
+		return
+	var peerID = multiplayer.get_remote_sender_id()
+	receiveClientSelection(peerID, selection)
+
+func receiveClientSelection(peerID: int, selection: Array) -> void:
+	clientSelections[peerID] = selection
+	
+func onSelectionTimerTimeout():
+	if not multiplayer.is_server():
+		return
+	print("Voting time over, requesting votes from clients")
+	for peerID in multiplayer.get_peers():
+		rpc_id(peerID, "requestClientSelection")
+		
+	await get_tree().create_timer(2.0).timeout
+	fillMissingSelections()
+	printAllSelections(clientSelections)
+
+func printAllSelections(selections: Dictionary):
+	print("All Player Selections")
+	for peerID in selections.keys():
+		var selection: Array = selections[peerID]
+		print("Player ", peerID, " selected: ", selection)
+
+func fillMissingSelections():
+	for peerID in players.keys():
+		if not clientSelections.has(peerID):
+			clientSelections[peerID] = []
