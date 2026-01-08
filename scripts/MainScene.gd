@@ -1,6 +1,8 @@
 extends Node
 
 var localState: Dictionary = {}
+var selectedPlayers: Array = []
+var maxPlayersToSelect: int = 2
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
 @onready var layoutRect: Node = $PlayerContainer/LayoutRect
@@ -135,5 +137,15 @@ func updatePlayersInRect() -> void:
 		index += 1
 
 func onPlayerSelected(peerID: int) -> void:
-	print(localState["selfID"] ," selected: ", peerID)
-	$Label.text = str(localState["selfID"]) + " Selected: " + str(peerID)
+	if selectedPlayers.has(peerID):
+		selectedPlayers.erase(peerID)
+		$Label.text = str(selectedPlayers)
+		return
+
+	if selectedPlayers.size() >= maxPlayersToSelect:
+		print("Selection full, cannot select more")
+		$Label.text = str(selectedPlayers)
+		return
+
+	selectedPlayers.append(peerID)
+	$Label.text = str(selectedPlayers)
