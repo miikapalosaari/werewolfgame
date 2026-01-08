@@ -2,7 +2,6 @@ extends Node
 
 enum GamePhase {
 	LOBBY,
-	STARTING,
 	NIGHT,
 	DAY,
 	VOTING,
@@ -65,7 +64,6 @@ func playerReady():
 	broadcastState()
 	if checkIfAllReady():
 		startGame()
-		selectionTimer.start()
 
 # RPC : Start game for clients
 @rpc("any_peer")
@@ -73,9 +71,9 @@ func startGame():
 	if not multiplayer.is_server():
 		return
 	print("Starting game")
-	currentPhase = GamePhase.STARTING
 	currentRound = 1
 	assignRoles()
+	startNight()
 	broadcastState()
 	
 	rpc("clientStartGame")
@@ -98,7 +96,6 @@ func updateRoleCounts(newCounts: Dictionary):
 	print("Updated role counts:", roleCounts)
 	broadcastState()
 
-		
 func onPlayerConnected(peerID) -> void:
 	print("Player connected (" + str(peerID) + ")")
 	players[peerID] = {
@@ -224,13 +221,16 @@ func receiveClientSelection(peerID: int, selection: Array) -> void:
 func onSelectionTimerTimeout():
 	if not multiplayer.is_server():
 		return
-	print("Voting time over, requesting votes from clients")
+	print("Selecting time over, requesting selections from clients")
 	for peerID in multiplayer.get_peers():
 		rpc_id(peerID, "requestClientSelection")
 		
 	await get_tree().create_timer(2.0).timeout
 	fillMissingSelections()
-	printAllSelections(clientSelections)
+	
+	match currentPhase:
+		GamePhase.NIGHT:
+			resolveNight()
 
 func printAllSelections(selections: Dictionary):
 	print("All Player Selections")
@@ -242,3 +242,42 @@ func fillMissingSelections():
 	for peerID in players.keys():
 		if not clientSelections.has(peerID):
 			clientSelections[peerID] = []
+
+func startNight() -> void:
+	if not multiplayer.is_server():
+		return
+		
+	print("Starting Night Phase")
+	currentPhase = GamePhase.NIGHT
+	clientSelections.clear()
+	selectionTimer.start()
+	broadcastState()
+
+func startDay() -> void:
+	if not multiplayer.is_server():
+		return
+	print("Starting Day Phase")
+
+func startVoting() -> void:
+	if not multiplayer.is_server():
+		return
+
+func resolveNight() -> void:
+	if not multiplayer.is_server():
+		return
+	print("Starting to resolve night selections")
+	printAllSelections(clientSelections)
+	advancePhase()
+
+func resolveVote() -> void:
+	if not multiplayer.is_server():
+		return
+
+func advancePhase() -> void:
+	match currentPhase:
+		GamePhase.NIGHT:
+			startDay()
+		GamePhase.DAY:
+			startVoting()
+		GamePhase.VOTING:
+			startNight()
