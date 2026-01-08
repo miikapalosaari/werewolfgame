@@ -10,28 +10,25 @@ script = ExtResource("1_awaa0")
 offset_right = 40.0
 offset_bottom = 40.0
 
-[node name="PlayerContainer" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-grow_horizontal = 2
-grow_vertical = 2
+[node name="PlayerContainer" type="Node2D" parent="."]
 
 [node name="LayoutRect" type="TextureRect" parent="PlayerContainer"]
 modulate = Color(1, 1, 1, 0.137255)
-layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = 249.0
-offset_top = 202.0
-offset_right = 1689.0
-offset_bottom = 922.0
+offset_left = 240.0
+offset_top = 196.0
+offset_right = 1680.0
+offset_bottom = 1036.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("2_40bio")
+
+[node name="Label" type="Label" parent="."]
+offset_left = 936.0
+offset_top = 511.0
+offset_right = 976.0
+offset_bottom = 534.0

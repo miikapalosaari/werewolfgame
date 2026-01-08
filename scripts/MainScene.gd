@@ -24,128 +24,116 @@ func updatePlayersInRect() -> void:
 	if players.is_empty():
 		return
 
-	var self_id: int = localState["selfID"]
-	if not players.has(self_id):
+	var selfID: int = localState["selfID"]
+	if not players.has(selfID):
 		return
 
 	var rect: Rect2 = layoutRect.get_global_rect()
 
 	# Place SELF (bottom center)
-	var self_data = players[self_id]
-	var self_node := preload("res://scenes/Player.tscn").instantiate()
-	playerRingContainer.add_child(self_node)
-	self_node.setup(self_data["name"], Color.RED)
-	self_node.scale = Vector2(4, 4)
+	var selfData: Dictionary = players[selfID]
+	var selfNode: Node = preload("res://scenes/Player.tscn").instantiate()
+	playerRingContainer.add_child(selfNode)
+	selfNode.setup(selfData["name"], Color.RED, selfID, Vector2(128, 128))
+	selfNode.connect("playerSelected", Callable(self, "onPlayerSelected"))
 
-	var bottom_center := Vector2(
+	var bottomCenter: Vector2 = Vector2(
 		rect.position.x + rect.size.x * 0.5,
 		rect.end.y
 	)
-	self_node.global_position = bottom_center - self_node.size * self_node.scale * 0.5
+	
+	var half: Vector2 = selfNode.getRectSize() * 0.5
+	selfNode.position = bottomCenter - half
 
-	var other_ids: Array = players.keys()
-	other_ids.erase(self_id)
-	other_ids.sort()
+	var otherIDs: Array = players.keys()
+	otherIDs.erase(selfID)
+	otherIDs.sort()
 
-	var total_others := other_ids.size()
-	if total_others == 0:
+	var totalOthers: int = otherIDs.size()
+	if totalOthers == 0:
 		return
 
-	# Maximum players per side
-	var max_top := 7
-	var max_side := 6
+	var maxTopPlayers: int = 7
+	var maxSidePlayers: int = 6
 
 	# Dynamically calculate counts
-	var top_count = total_others
-	if top_count > max_top:
-		top_count = max_top
+	var topCount: int = totalOthers
+	if topCount > maxTopPlayers:
+		topCount = maxTopPlayers
+	var remaining = totalOthers - topCount
 
-	var remaining = total_others - top_count
+	var leftCount := int(remaining / 2)
+	if leftCount > maxSidePlayers:
+		leftCount = maxSidePlayers
 
-	var left_count := int(remaining / 2)
-	if left_count > max_side:
-		left_count = max_side
+	var rightCount: int = remaining - leftCount
+	if rightCount > maxSidePlayers:
+		rightCount = maxSidePlayers
 
-	var right_count = remaining - left_count
-	if right_count > max_side:
-		right_count = max_side
+	var centerX: float = rect.position.x + rect.size.x * 0.5
+	var topY: float = rect.position.y
+	var leftX: float = rect.position.x
+	var rightX: float = rect.end.x
 
-	var center_x := rect.position.x + rect.size.x * 0.5
-	var top_y := rect.position.y
-	var left_x := rect.position.x
-	var right_x := rect.end.x
+	var playerSize: = Vector2(96, 96)
+	var margin: int = 32
+	var topSpacing: float = rect.size.x / float(topCount + 1)
+	var leftSpacing: float = playerSize.y + margin
+	var rightSpacing: float = playerSize.y + margin
 
-	# Calculate spacing
-	var top_spacing := 0.0
-	if top_count > 1:
-		top_spacing = rect.size.x / float(top_count + 1)
-	else:
-		top_spacing = rect.size.x / 2.0
-
-	var left_spacing := 0.0
-	if left_count > 1:
-		left_spacing = rect.size.y / float(left_count + 1)
-	else:
-		left_spacing = rect.size.y / 2.0
-
-	var right_spacing := 0.0
-	if right_count > 1:
-		right_spacing = rect.size.y / float(right_count + 1)
-	else:
-		right_spacing = rect.size.y / 2.0
-
-	var index := 0
+	var index: int = 0
 
 	# Top side
-	for i in range(top_count):
-		var peer_id = other_ids[index]
-		var data = players[peer_id]
+	for i in range(topCount):
+		var peerID: int = otherIDs[index]
+		var data: Dictionary = players[peerID]
+		var x: float = rect.position.x + (i + 1) * topSpacing
+		var y: float = topY
+		var hue: float = fmod(index * 0.61, 1.0)
+		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
 
-		var x := rect.position.x + (i + 1) * top_spacing
-		var y := top_y
-
-		var hue = fmod(index * 0.61, 1.0)
-		var color = Color.from_hsv(hue, 0.75, 0.9)
-
-		var node = preload("res://scenes/Player.tscn").instantiate()
+		var node: Node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color)
-		node.global_position = Vector2(x, y) - node.size * 0.5
-		node.scale = Vector2(1.5, 1.5)
+		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
+		var half2: Vector2 = node.getRectSize() * 0.5
+		node.position = Vector2(x, y) - half2
 		index += 1
 
 	# Left side
-	for i in range(left_count):
-		var peer_id = other_ids[index]
-		var data = players[peer_id]
-
-		var x := left_x
-		var y := rect.position.y + (i + 1) * left_spacing
-
-		var hue = fmod(index * 0.61, 1.0)
-		var color = Color.from_hsv(hue, 0.75, 0.9)
+	for i in range(leftCount):
+		var peerID: int = otherIDs[index]
+		var data: Dictionary = players[peerID]
+		var x: float = leftX
+		var y: float = rect.position.y + (i + 1) * leftSpacing
+		var hue: float = fmod(index * 0.61, 1.0)
+		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color)
-		node.global_position = Vector2(x, y) - node.size * 0.5
-		node.scale = Vector2(1.5, 1.5)
+		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
+		var half3: Vector2 = node.getRectSize() * 0.5
+		node.position = Vector2(x, y) - half3
 		index += 1
 
 	# Right side
-	for i in range(right_count):
-		var peer_id = other_ids[index]
-		var data = players[peer_id]
-
-		var x := right_x
-		var y := rect.position.y + (i + 1) * right_spacing
-
-		var hue = fmod(index * 0.61, 1.0)
-		var color = Color.from_hsv(hue, 0.75, 0.9)
+	for i in range(rightCount):
+		var peerID: int = otherIDs[index]
+		var data: Dictionary = players[peerID]
+		var x: float = rightX
+		var y: float = rect.position.y + (i + 1) * rightSpacing
+		var hue: float = fmod(index * 0.61, 1.0)
+		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color)
-		node.global_position = Vector2(x, y) - node.size * 0.5
-		node.scale = Vector2(1.5, 1.5)
+		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
+		var half4: Vector2 = node.getRectSize() * 0.5
+		node.position = Vector2(x, y) - half4
 		index += 1
+
+func onPlayerSelected(peerID: int) -> void:
+	print(localState["selfID"] ," selected: ", peerID)
+	$Label.text = str(localState["selfID"]) + " Selected: " + str(peerID)
