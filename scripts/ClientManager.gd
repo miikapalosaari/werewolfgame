@@ -5,7 +5,6 @@ var localState: Dictionary = {}
 # Called when the server sends a full or partial game state update
 @rpc("any_peer", "call_remote")
 func updateState(newState: Dictionary):
-	print("ClientManager: Received new state")
 	localState = newState
 
 	# Forward to the active scene if it has a handler

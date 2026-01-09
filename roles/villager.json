@@ -1,4 +1,13 @@
 {
-  "id": "villager",
-  "canSeeTeam": false
+	"id": "villager",
+	"canSeeTeam": false,
+	"team": "villagers",
+	
+	"actsAtNight": false,
+	"actsAtDay": false,
+	
+	"voting": {
+		"canVote": true,
+		"voteWeight": 1
+	},
 }

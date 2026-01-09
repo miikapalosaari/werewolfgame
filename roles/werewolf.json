@@ -1,4 +1,13 @@
 {
-  "id": "werewolf",
-  "canSeeTeam": true
+	"id": "werewolf",
+	"canSeeTeam": true,
+	"team": "werewolves",
+	
+	"actsAtNight": true,
+	"actsAtDay": false,
+	
+	"voting": {
+		"canVote": true,
+		"voteWeight": 1
+	},
 }

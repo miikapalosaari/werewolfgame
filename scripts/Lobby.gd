@@ -5,7 +5,6 @@ extends Control
 var localState: Dictionary = {}
 
 func applyState(state: Dictionary):
-	print("Lobby: applyState")
 	localState = state
 	
 	if not state.has("players"):

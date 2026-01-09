@@ -12,7 +12,7 @@ func _ready():
 	GameManager.rpc_id(1, "requestFullState")
 
 func applyState(state: Dictionary):
-	print("Applying game state:", state)
+	print("Applying game state:\n", JSON.stringify(state, "\t", 2))
 	localState = state
 	updatePlayersInRect()
 
@@ -36,7 +36,12 @@ func updatePlayersInRect() -> void:
 	var selfData: Dictionary = players[selfID]
 	var selfNode: Node = preload("res://scenes/Player.tscn").instantiate()
 	playerRingContainer.add_child(selfNode)
-	selfNode.setup(selfData["name"], Color.RED, selfID, Vector2(128, 128))
+	var n1: String = selfData["name"]
+	if selfData["alive"]:
+		n1 += "(Alive)"
+	else:
+		n1 += "(Not Alive)"
+	selfNode.setup(n1, Color.RED, selfID, Vector2(128, 128))
 	selfNode.connect("playerSelected", Callable(self, "onPlayerSelected"))
 
 	var bottomCenter: Vector2 = Vector2(
@@ -89,6 +94,11 @@ func updatePlayersInRect() -> void:
 	for i in range(topCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
+		var n: String = data["name"]
+		if data["alive"]:
+			n += "(Alive)"
+		else:
+			n += "(Not Alive)"
 		var x: float = rect.position.x + (i + 1) * topSpacing
 		var y: float = topY
 		var hue: float = fmod(index * 0.61, 1.0)
@@ -96,7 +106,7 @@ func updatePlayersInRect() -> void:
 
 		var node: Node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, Vector2(96, 96))
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
 		var half2: Vector2 = node.getRectSize() * 0.5
 		node.position = Vector2(x, y) - half2
@@ -106,6 +116,11 @@ func updatePlayersInRect() -> void:
 	for i in range(leftCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
+		var n: String = data["name"]
+		if data["alive"]:
+			n += "(Alive)"
+		else:
+			n += "(Not Alive)"
 		var x: float = leftX
 		var y: float = rect.position.y + (i + 1) * leftSpacing
 		var hue: float = fmod(index * 0.61, 1.0)
@@ -113,7 +128,7 @@ func updatePlayersInRect() -> void:
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, Vector2(96, 96))
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
 		var half3: Vector2 = node.getRectSize() * 0.5
 		node.position = Vector2(x, y) - half3
@@ -123,6 +138,11 @@ func updatePlayersInRect() -> void:
 	for i in range(rightCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
+		var n: String = data["name"]
+		if data["alive"]:
+			n += "(Alive)"
+		else:
+			n += "(Not Alive)"
 		var x: float = rightX
 		var y: float = rect.position.y + (i + 1) * rightSpacing
 		var hue: float = fmod(index * 0.61, 1.0)
@@ -130,7 +150,7 @@ func updatePlayersInRect() -> void:
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(data["name"], color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, Vector2(96, 96))
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
 		var half4: Vector2 = node.getRectSize() * 0.5
 		node.position = Vector2(x, y) - half4

@@ -35,12 +35,10 @@ func _ready() -> void:
 		var role = roles[key]
 		print("ID:", role["id"])
 		
-	var t : Timer = Timer.new()
-	t.wait_time = 10.0
-	t.one_shot = true
-	add_child(t)
-	t.connect("timeout", Callable(self, "onSelectionTimerTimeout"))
-	selectionTimer = t
+	selectionTimer = Timer.new()
+	selectionTimer.one_shot = true
+	add_child(selectionTimer)
+	selectionTimer.connect("timeout", Callable(self, "onSelectionTimerTimeout"))
 
 # RPC : Client can request full state
 @rpc("any_peer")
@@ -138,12 +136,15 @@ func canSeeRole(viewerID: int, targetID: int) -> bool:
 	# Everyone can see their own role
 	if viewerID == targetID:
 		return true
+		
+	var viewerData = roles[viewerRole]
+	var targetData = roles[targetRole]
 
-	# If viewer's role has canSeeTeam enabled and has the same role as target:
-	if roles[viewerRole].get("canSeeTeam", false):
-		if viewerRole == targetRole:
-			return true
-	return false
+	# If viewer's role has canSeeTeam set to false
+	if not viewerData.get("canSeeTeam", false):
+		return false
+		
+	return viewerData.get("team", "") == targetData.get("team", "")
 
 func buildStateSnapshot(peerID: int) -> Dictionary:
 	var filteredPlayers: Dictionary = {}
@@ -217,7 +218,11 @@ func sendClientSelection(selection: Array):
 
 func receiveClientSelection(peerID: int, selection: Array) -> void:
 	clientSelections[peerID] = selection
-	
+
+func startSelectionTimer(seconds: float) -> void:
+	selectionTimer.wait_time = seconds
+	selectionTimer.start()
+
 func onSelectionTimerTimeout():
 	if not multiplayer.is_server():
 		return
@@ -250,7 +255,7 @@ func startNight() -> void:
 	print("Starting Night Phase")
 	currentPhase = GamePhase.NIGHT
 	clientSelections.clear()
-	selectionTimer.start()
+	startSelectionTimer(30)
 	broadcastState()
 
 func startDay() -> void:
@@ -262,11 +267,60 @@ func startVoting() -> void:
 	if not multiplayer.is_server():
 		return
 
+func getMostCommonSelection(selections: Array) -> Dictionary:
+	var counts: Dictionary = {}
+	for s in selections:
+		counts[s] = counts.get(s, 0) + 1
+
+	var highest: int = counts.values().max()
+	var mostCommon: Array = []
+
+	for key in counts.keys():
+		if counts[key] == highest:
+			mostCommon.append(key)
+
+	return {
+		"mostCommon": mostCommon,
+		"count": highest,
+		"tie": mostCommon.size() > 1
+	}
+
+
 func resolveNight() -> void:
 	if not multiplayer.is_server():
 		return
 	print("Starting to resolve night selections")
 	printAllSelections(clientSelections)
+	
+	var killSelections: Array = []
+	for peerID in players.keys():
+		var player = players[peerID]
+		var roleID = player["role"]
+		var role = roles[roleID]
+
+		if not role.get("actsAtNight", false):
+			print("Player ", peerID, " does not actAtNight")
+			continue
+		
+		if not clientSelections.has(peerID):
+			continue
+			
+		killSelections.append_array(clientSelections[peerID])
+	
+	if killSelections.is_empty():
+		print("No night actions submitted")
+		advancePhase()
+		return
+	
+	var result = getMostCommonSelection(killSelections)
+	if result["tie"]:
+		print("Tie between:", result["mostCommon"])
+		print("Nobody dies")
+	else:
+		print("Most common:", result["mostCommon"][0])
+		print("Player ", result["mostCommon"][0], " dies")
+		players[result["mostCommon"][0]]["alive"] = false
+	broadcastState()
 	advancePhase()
 
 func resolveVote() -> void:
