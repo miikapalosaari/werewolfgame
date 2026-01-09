@@ -3,16 +3,36 @@ extends Node
 var localState: Dictionary = {}
 var selectedPlayers: Dictionary = {}
 var maxPlayersToSelect: int = 2
+var syncedTimerEnd: int = 0
+var pendingTimerStart: Dictionary = {}
+
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
 @onready var layoutRect: Node = $PlayerContainer/LayoutRect
 
 func _ready():
+	if GameManager.pendingTimerStart.size() > 0:
+		var t = GameManager.pendingTimerStart
+		startSyncedTimer(t["start"], t["duration"])
+		GameManager.pendingTimerStart.clear()
 	print("Client: MainScene loaded, requesting game state...")
 	GameManager.rpc_id(1, "requestFullState")
+	
+func _process(delta):
+	if syncedTimerEnd == 0:
+		return
+
+	var now = Time.get_ticks_msec()
+	var remaining = syncedTimerEnd - now
+
+	if remaining < 0:
+		remaining = 0
+
+	$TimerLabel.text = str(remaining / 1000.0)
+
 
 func applyState(state: Dictionary):
-	print("Applying game state:\n", JSON.stringify(state, "\t", 2))
+	#print("Applying game state:\n", JSON.stringify(state, "\t", 2))
 	localState = state
 	updatePlayersInRect()
 
@@ -181,3 +201,21 @@ func onPlayerSelected(peerID: int) -> void:
 func clientSendSelection():
 	print("Client: ", localState["selfID"], " is sending selection: ", selectedPlayers)
 	GameManager.rpc_id(1, "sendClientSelection", selectedPlayers)
+
+func startSyncedTimer(server_start_msec: int, duration_msec: int):
+	var now = Time.get_ticks_msec()
+	var elapsed = now - server_start_msec
+
+	# Compute remaining time
+	var remaining = duration_msec - elapsed
+
+	# Clamp so late joiners don't get extra time
+	if remaining < 0:
+		remaining = 0
+	if remaining > duration_msec:
+		remaining = duration_msec
+
+	# Set the absolute end time
+	syncedTimerEnd = now + remaining
+
+	print("Client synced timer remaining (sec): ", remaining / 1000.0)

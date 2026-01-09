@@ -19,6 +19,7 @@ var votes: Dictionary = {}
 var roleCounts: Dictionary = {}
 var clientSelections: Dictionary = {}
 var selectionTimer: Timer 
+var pendingTimerStart: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -219,9 +220,25 @@ func sendClientSelection(selection: Dictionary):
 func receiveClientSelection(peerID: int, selection: Dictionary) -> void:
 	clientSelections[peerID] = selection
 
+@rpc("any_peer")
+func startSyncedTimer(server_start_msec: int, duration_msec: int):
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("startSyncedTimer"):
+		scene.startSyncedTimer(server_start_msec, duration_msec)
+	else:
+		pendingTimerStart = {
+			"start": server_start_msec,
+			"duration": duration_msec
+		}
+		print("Client: MainScene not ready for timer sync")
+
+	
 func startSelectionTimer(seconds: float) -> void:
 	selectionTimer.wait_time = seconds
 	selectionTimer.start()
+	var now = Time.get_ticks_msec()
+	var duration = int(seconds * 1000)
+	rpc("startSyncedTimer", now, duration)
 
 func onSelectionTimerTimeout():
 	if not multiplayer.is_server():

@@ -40,4 +40,10 @@ offset_right = 1221.0
 offset_bottom = 697.0
 text = "SEND VOTES"
 
+[node name="TimerLabel" type="Label" parent="."]
+offset_left = 940.0
+offset_top = 26.0
+offset_right = 980.0
+offset_bottom = 49.0
+
 [connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]
