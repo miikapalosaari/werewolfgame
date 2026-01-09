@@ -240,13 +240,13 @@ func onSelectionTimerTimeout():
 func printAllSelections(selections: Dictionary):
 	print("All Player Selections")
 	for peerID in selections.keys():
-		var selection: Array = selections[peerID]
+		var selection: Dictionary = selections[peerID]
 		print("Player ", peerID, " selected: ", selection)
 
 func fillMissingSelections():
 	for peerID in players.keys():
 		if not clientSelections.has(peerID):
-			clientSelections[peerID] = []
+			clientSelections[peerID] = {}
 
 func startNight() -> void:
 	if not multiplayer.is_server():
