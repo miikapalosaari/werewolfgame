@@ -1,7 +1,7 @@
 extends Node
 
 var localState: Dictionary = {}
-var selectedPlayers: Array = []
+var selectedPlayers: Dictionary = {}
 var maxPlayersToSelect: int = 2
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
@@ -157,17 +157,24 @@ func updatePlayersInRect() -> void:
 		index += 1
 
 func onPlayerSelected(peerID: int) -> void:
-	if selectedPlayers.has(peerID):
-		selectedPlayers.erase(peerID)
-		$Label.text = str(selectedPlayers)
+	var selfID = localState["selfID"]
+	var myRoleID = localState["players"][selfID]["role"]
+	var myRole = localState["roles"][myRoleID]
+	var nightActions = myRole.get("nightActions", [])
+
+	if nightActions.is_empty():
 		return
 
-	if selectedPlayers.size() >= maxPlayersToSelect:
-		print("Selection full, cannot select more")
-		$Label.text = str(selectedPlayers)
+	if not localState["players"][peerID]["alive"]:
+		print("Cannot select dead player")
 		return
-
-	selectedPlayers.append(peerID)
+		
+	# For now assuming 1 nightAction
+	var actionType = nightActions[0]["type"]
+	if selectedPlayers.has(actionType) and selectedPlayers[actionType] == peerID:
+		selectedPlayers.erase(actionType)
+	else:
+		selectedPlayers[actionType] = peerID
 	$Label.text = str(selectedPlayers)
 
 @rpc("any_peer")

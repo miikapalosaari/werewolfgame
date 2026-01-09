@@ -1,15 +1,15 @@
 {
-	"id": "werewolf",
-	"canSeeTeam": true,
-	"team": "werewolves",
+	"id": "sage",
+	"canSeeTeam": false,
+	"team": "villagers",
 	
 	"actsAtNight": true,
 	"actsAtDay": false,
 	
 	"nightActions": [
 		{
-			"type": "kill",
-			"resolution": "majorityWins"
+			"type": "investigate",
+			"resolution": "individual"
 		}
 	],
 	

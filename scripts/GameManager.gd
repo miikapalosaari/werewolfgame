@@ -210,13 +210,13 @@ func requestClientSelection():
 		print("Client: no clientSendSelection() on current scene")
 
 @rpc("any_peer")
-func sendClientSelection(selection: Array):
+func sendClientSelection(selection: Dictionary):
 	if not multiplayer.is_server():
 		return
 	var peerID = multiplayer.get_remote_sender_id()
 	receiveClientSelection(peerID, selection)
 
-func receiveClientSelection(peerID: int, selection: Array) -> void:
+func receiveClientSelection(peerID: int, selection: Dictionary) -> void:
 	clientSelections[peerID] = selection
 
 func startSelectionTimer(seconds: float) -> void:
@@ -285,41 +285,48 @@ func getMostCommonSelection(selections: Array) -> Dictionary:
 		"tie": mostCommon.size() > 1
 	}
 
-
 func resolveNight() -> void:
 	if not multiplayer.is_server():
 		return
-	print("Starting to resolve night selections")
-	printAllSelections(clientSelections)
+	print("Starting to resolve night")
 	
-	var killSelections: Array = []
+	var collected: Dictionary = {}
+	# Collect selections per action
 	for peerID in players.keys():
-		var player = players[peerID]
-		var roleID = player["role"]
-		var role = roles[roleID]
-
-		if not role.get("actsAtNight", false):
-			print("Player ", peerID, " does not actAtNight")
-			continue
-		
 		if not clientSelections.has(peerID):
 			continue
+		var roleID = players[peerID]["role"]
+		var role = roles[roleID]
+
+		if not role.get("nightActions"):
+			continue
 			
-		killSelections.append_array(clientSelections[peerID])
-	
-	if killSelections.is_empty():
-		print("No night actions submitted")
-		advancePhase()
-		return
-	
-	var result = getMostCommonSelection(killSelections)
-	if result["tie"]:
-		print("Tie between:", result["mostCommon"])
-		print("Nobody dies")
-	else:
-		print("Most common:", result["mostCommon"][0])
-		print("Player ", result["mostCommon"][0], " dies")
-		players[result["mostCommon"][0]]["alive"] = false
+		for action in role["nightActions"]:
+			var type = action["type"]
+			if not collected.has(type):
+				collected[type] = []
+			if clientSelections[peerID].has(type):
+				collected[type].append(clientSelections[peerID][type])
+
+	# Resolve each action using its resolution rule
+	for actionType in collected.keys():
+		var resolution: String = "majorityWins"
+		var found: bool = false
+		for peerID in players.keys():
+			if found:
+				break
+			var roleID = players[peerID]["role"]
+			var role = roles[roleID]
+
+			if role.has("nightActions"):
+				for action in role["nightActions"]:
+					if action["type"] == actionType:
+						resolution = action["resolution"]
+						found = true
+						break
+		resolveAction(actionType, resolution, collected[actionType])
+			
+	clientSelections.clear()
 	broadcastState()
 	advancePhase()
 
@@ -335,3 +342,44 @@ func advancePhase() -> void:
 			startVoting()
 		GamePhase.VOTING:
 			startNight()
+
+
+func resolveAction(actionType: String, resolution: String, selections: Array) -> void:
+	match resolution:
+		"majorityWins":
+			resolveMajorityWins(actionType, selections)
+		"individual":
+			resolveIndividual(actionType, selections)
+		_:
+			print("Unknown resolution:", resolution)
+			
+func resolveMajorityWins(actionType: String, selections: Array) -> void:
+	if selections.is_empty():
+		print("No selections for", actionType)
+		return
+		
+	var result := getMostCommonSelection(selections)
+	if result["tie"]:
+		print("Tie in ", actionType, " - no effect")
+		return
+
+	var targetID: int = result["mostCommon"][0]
+	match actionType:
+		"kill":
+			if players.has(targetID) and players[targetID]["alive"]:
+				players[targetID]["alive"] = false
+				print("Player ", targetID, " was killed")
+
+func resolveIndividual(actionType: String, selections: Array) -> void:
+	if selections.is_empty():
+		print("No selections for ", actionType)
+		return
+
+	for targetID in selections:
+		match actionType:
+			"investigate":
+				if players.has(targetID):
+					var targetRole: String = players[targetID]["role"]
+					for actorID in clientSelections.keys():
+						if clientSelections[actorID].get(actionType) == targetID:
+							print("Player ", actorID, " selected ", targetID, " -> role: ", targetRole)
