@@ -8,6 +8,17 @@ enum GamePhase {
 	ENDED
 }
 
+const GamePhaseNames := {
+	GamePhase.LOBBY: "Lobby",
+	GamePhase.NIGHT: "Night",
+	GamePhase.DAY: "Day",
+	GamePhase.VOTING: "Voting",
+	GamePhase.ENDED: "Ended"
+}
+
+func getCurrentPhaseString() -> String:
+	return GamePhaseNames[currentPhase]
+
 var currentPhase: GamePhase = GamePhase.LOBBY
 var currentRound: int = 0
 var players: Dictionary = {}
@@ -156,7 +167,7 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		filteredPlayers[id] = p
 	
 	return {
-		"phase": currentPhase,
+		"phase": getCurrentPhaseString(),
 		"round": currentRound,
 		"players": filteredPlayers,
 		"leader": lobbyLeader,
@@ -279,6 +290,10 @@ func startDay() -> void:
 	if not multiplayer.is_server():
 		return
 	print("Starting Day Phase")
+	currentPhase = GamePhase.DAY
+	clientSelections.clear()
+	startSelectionTimer(60)
+	broadcastState()
 
 func startVoting() -> void:
 	if not multiplayer.is_server():

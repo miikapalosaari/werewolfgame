@@ -51,14 +51,14 @@ grow_horizontal = 2
 [node name="PhaseLabel" type="Label" parent="TopUI"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "Night"
+text = "Phase"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="TimerLabel" type="Label" parent="TopUI"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "01:30"
+text = "00:00"
 horizontal_alignment = 1
 vertical_alignment = 1
 

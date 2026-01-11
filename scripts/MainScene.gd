@@ -29,7 +29,7 @@ func _process(delta):
 	if remaining < 0:
 		remaining = 0
 
-	var totalSeconds: int = remaining / 1000
+	var totalSeconds := int(ceil(remaining / 1000.0))
 	var minutes: = int(totalSeconds / 60)
 	var seconds: = int(totalSeconds % 60)
 
@@ -43,6 +43,7 @@ func applyState(state: Dictionary):
 	print("Applying game state:\n", JSON.stringify(state, "\t", 2))
 	localState = state
 	updatePlayersInRect()
+	$TopUI/PhaseLabel.text = localState["phase"]
 
 func updatePlayersInRect() -> void:
 	# Clear previous players (except layout rectangle)
