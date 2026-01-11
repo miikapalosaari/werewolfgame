@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://l5k83pb0rcsy"]
 
 [ext_resource type="Script" path="res://scripts/MainScene.gd" id="1_awaa0"]
-[ext_resource type="Texture2D" uid="uid://cwenv1rny5qno" path="res://images/BackgroundColor.png" id="2_40bio"]
+[ext_resource type="Texture2D" uid="uid://l2ej8ce8dc0f" path="res://images/table.png" id="2_1sjyb"]
 
 [node name="MainScene" type="Node2D"]
 script = ExtResource("1_awaa0")
@@ -13,7 +13,6 @@ offset_bottom = 40.0
 [node name="PlayerContainer" type="Node2D" parent="."]
 
 [node name="LayoutRect" type="TextureRect" parent="PlayerContainer"]
-modulate = Color(1, 1, 1, 0.137255)
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -25,7 +24,7 @@ offset_right = 1680.0
 offset_bottom = 1036.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("2_40bio")
+texture = ExtResource("2_1sjyb")
 
 [node name="Label" type="Label" parent="."]
 offset_left = 936.0
@@ -40,10 +39,27 @@ offset_right = 1221.0
 offset_bottom = 697.0
 text = "SEND VOTES"
 
-[node name="TimerLabel" type="Label" parent="."]
-offset_left = 940.0
-offset_top = 26.0
-offset_right = 980.0
-offset_bottom = 49.0
+[node name="TopUI" type="VBoxContainer" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = 839.0
+offset_right = 924.0
+offset_bottom = 94.0
+grow_horizontal = 2
+
+[node name="PhaseLabel" type="Label" parent="TopUI"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Night"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TimerLabel" type="Label" parent="TopUI"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "01:30"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]

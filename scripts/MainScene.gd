@@ -5,6 +5,7 @@ var selectedPlayers: Dictionary = {}
 var maxPlayersToSelect: int = 2
 var syncedTimerEnd: int = 0
 var pendingTimerStart: Dictionary = {}
+var lastDisplayedTime := ""
 
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
@@ -24,15 +25,22 @@ func _process(delta):
 
 	var now = Time.get_ticks_msec()
 	var remaining = syncedTimerEnd - now
-
+	
 	if remaining < 0:
 		remaining = 0
 
-	$TimerLabel.text = str(remaining / 1000.0)
+	var totalSeconds: int = remaining / 1000
+	var minutes: = int(totalSeconds / 60)
+	var seconds: = int(totalSeconds % 60)
 
+	var formatted := "%02d:%02d" % [minutes, seconds]
+
+	if formatted != lastDisplayedTime:
+		$TopUI/TimerLabel.text = formatted
+		lastDisplayedTime = formatted
 
 func applyState(state: Dictionary):
-	#print("Applying game state:\n", JSON.stringify(state, "\t", 2))
+	print("Applying game state:\n", JSON.stringify(state, "\t", 2))
 	localState = state
 	updatePlayersInRect()
 
