@@ -1,11 +1,18 @@
 extends Node
 
+enum SelectionMode {
+	NONE,
+	NIGHT_ACTION,
+	VOTE
+}
+
 var localState: Dictionary = {}
 var selectedPlayers: Dictionary = {}
 var maxPlayersToSelect: int = 2
 var syncedTimerEnd: int = 0
 var pendingTimerStart: Dictionary = {}
 var lastDisplayedTime := ""
+var selectionMode: SelectionMode = SelectionMode.NONE
 
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
@@ -44,6 +51,16 @@ func applyState(state: Dictionary):
 	localState = state
 	updatePlayersInRect()
 	$TopUI/PhaseLabel.text = localState["phase"]
+	
+	match localState["phase"]:
+		"Night":
+			selectionMode = SelectionMode.NIGHT_ACTION
+			hideDayDecisionUI()
+		"Day":
+			selectionMode = SelectionMode.NONE
+		"Voting":
+			selectionMode = SelectionMode.VOTE
+			hideDayDecisionUI()
 
 func updatePlayersInRect() -> void:
 	# Clear previous players (except layout rectangle)
@@ -186,24 +203,39 @@ func updatePlayersInRect() -> void:
 		index += 1
 
 func onPlayerSelected(peerID: int) -> void:
-	var selfID = localState["selfID"]
-	var myRoleID = localState["players"][selfID]["role"]
-	var myRole = localState["roles"][myRoleID]
-	var nightActions = myRole.get("nightActions", [])
-
-	if nightActions.is_empty():
-		return
-
 	if not localState["players"][peerID]["alive"]:
 		print("Cannot select dead player")
 		return
 		
-	# For now assuming 1 nightAction
-	var actionType = nightActions[0]["type"]
-	if selectedPlayers.has(actionType) and selectedPlayers[actionType] == peerID:
+	match selectionMode:
+		SelectionMode.NIGHT_ACTION:
+			handleNightActionSelection(peerID)
+		SelectionMode.VOTE:
+			handleVoteSelection(peerID)
+		SelectionMode.NONE:
+			return
+
+func handleNightActionSelection(peerID: int) -> void:
+	var selfID: int = localState["selfID"]
+	var myRoleID: String = localState["players"][selfID]["role"]
+	var myRole: Dictionary = localState["roles"][myRoleID]
+	var nightActions: Array = myRole.get("nightActions", [])
+
+	if nightActions.is_empty():
+		return
+
+	var actionType: String = nightActions[0]["type"]
+	if selectedPlayers.get(actionType) == peerID:
 		selectedPlayers.erase(actionType)
 	else:
 		selectedPlayers[actionType] = peerID
+	$Label.text = str(selectedPlayers)
+
+func handleVoteSelection(peerID: int) -> void:
+	if selectedPlayers.get("vote") == peerID:
+		selectedPlayers.erase("vote")
+	else:
+		selectedPlayers["vote"] = peerID
 	$Label.text = str(selectedPlayers)
 
 @rpc("any_peer")
@@ -240,6 +272,11 @@ func requestDayDecision():
 	$DayDecisionsUI/StartVoteButton.visible = true
 	$DayDecisionsUI/SkipButton.visible = true
 
+
+func resetUI():
+	print("Resetting UI")
+	selectedPlayers.clear()
+	$Label.text = ""
 
 func _on_start_vote_button_pressed() -> void:
 	GameManager.rpc_id(1, "sendDayDecision", "vote")

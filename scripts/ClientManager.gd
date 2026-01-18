@@ -19,3 +19,11 @@ func requestDayDecision():
 		scene.requestDayDecision()
 	else:
 		print("Client: MainScene not ready for day decision")
+
+@rpc("any_peer")
+func requestClientResetUI():
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("resetUI"):
+		scene.resetUI()
+	else:
+		print("Client: MainScene not ready for resetUI")

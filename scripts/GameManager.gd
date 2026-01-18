@@ -264,10 +264,25 @@ func onSelectionTimerTimeout():
 			await get_tree().create_timer(2.0).timeout
 			fillMissingSelections()
 			resolveNight()
+			for peerID in multiplayer.get_peers():
+				ClientManager.rpc_id(peerID, "requestClientResetUI")
 			
 		GamePhase.DAY:
-			print("Day discussion over, asking players if they want to vote")
-			startDayDecisionVote()
+			print("Day discussion time over")
+			await get_tree().create_timer(2.0).timeout
+			resolveDayDecision()
+			for peerID in multiplayer.get_peers():
+				ClientManager.rpc_id(peerID, "requestClientResetUI")
+				
+		GamePhase.VOTING:
+			print("Selecting time over, requesting selections from clients")
+			for peerID in multiplayer.get_peers():
+				rpc_id(peerID, "requestClientSelection")
+			await get_tree().create_timer(2.0).timeout
+			fillMissingSelections()
+			resolveVote()
+			for peerID in multiplayer.get_peers():
+				ClientManager.rpc_id(peerID, "requestClientResetUI")
 
 func printAllSelections(selections: Dictionary):
 	print("All Player Selections")
@@ -283,7 +298,6 @@ func fillMissingSelections():
 func startNight() -> void:
 	if not multiplayer.is_server():
 		return
-		
 	print("Starting Night Phase")
 	currentPhase = GamePhase.NIGHT
 	clientSelections.clear()
@@ -297,15 +311,6 @@ func sendDayDecision(decision: String):
 	var peerID = multiplayer.get_remote_sender_id()
 	dayDecisions[peerID] = decision
 	print("Received day decision from", peerID, ":", decision)
-
-func startDayDecisionVote():
-	dayDecisions.clear()
-	for peerID in multiplayer.get_peers():
-		#rpc_id(peerID, "requestDayDecision")
-		ClientManager.rpc_id(peerID, "requestDayDecision")
-
-	await get_tree().create_timer(10.0).timeout
-	resolveDayDecision()
 
 func resolveDayDecision():
 	if not multiplayer.is_server():
@@ -337,13 +342,21 @@ func startDay() -> void:
 		return
 	print("Starting Day Phase")
 	currentPhase = GamePhase.DAY
+	dayDecisions.clear()
 	clientSelections.clear()
+	for peerID in multiplayer.get_peers():
+		ClientManager.rpc_id(peerID, "requestDayDecision")
 	startSelectionTimer(60)
 	broadcastState()
 
 func startVoting() -> void:
 	if not multiplayer.is_server():
 		return
+	print("Starting Voting Phase")
+	currentPhase = GamePhase.VOTING
+	clientSelections.clear()
+	startSelectionTimer(15)
+	broadcastState()
 
 func getMostCommonSelection(selections: Array) -> Dictionary:
 	var counts: Dictionary = {}
@@ -411,6 +424,16 @@ func resolveNight() -> void:
 func resolveVote() -> void:
 	if not multiplayer.is_server():
 		return
+		
+	var votes: Array = []
+
+	for peerID in players.keys():
+		var sel = clientSelections.get(peerID, {})
+		if sel.has("vote"):
+			votes.append(sel["vote"])
+
+	resolveMajorityWins("vote", votes)
+	advancePhase()
 
 func advancePhase() -> void:
 	match currentPhase:
@@ -447,6 +470,10 @@ func resolveMajorityWins(actionType: String, selections: Array) -> void:
 			if players.has(targetID) and players[targetID]["alive"]:
 				players[targetID]["alive"] = false
 				print("Player ", targetID, " was killed")
+		"vote":
+			if players.has(targetID) and players[targetID]["alive"]:
+				players[targetID]["alive"] = false
+				print("Player ", targetID, " was voted off")
 
 func resolveIndividual(actionType: String, selections: Array) -> void:
 	if selections.is_empty():
