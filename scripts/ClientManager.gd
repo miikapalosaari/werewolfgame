@@ -11,3 +11,11 @@ func updateState(newState: Dictionary):
 	var scene = get_tree().current_scene
 	if scene and scene.has_method("applyState"):
 		scene.applyState(newState)
+
+@rpc("any_peer")
+func requestDayDecision():
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("requestDayDecision"):
+		scene.requestDayDecision()
+	else:
+		print("Client: MainScene not ready for day decision")

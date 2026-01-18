@@ -31,6 +31,7 @@ var roleCounts: Dictionary = {}
 var clientSelections: Dictionary = {}
 var selectionTimer: Timer 
 var pendingTimerStart: Dictionary = {}
+var dayDecisions: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -254,16 +255,19 @@ func startSelectionTimer(seconds: float) -> void:
 func onSelectionTimerTimeout():
 	if not multiplayer.is_server():
 		return
-	print("Selecting time over, requesting selections from clients")
-	for peerID in multiplayer.get_peers():
-		rpc_id(peerID, "requestClientSelection")
-		
-	await get_tree().create_timer(2.0).timeout
-	fillMissingSelections()
-	
+
 	match currentPhase:
 		GamePhase.NIGHT:
+			print("Selecting time over, requesting selections from clients")
+			for peerID in multiplayer.get_peers():
+				rpc_id(peerID, "requestClientSelection")
+			await get_tree().create_timer(2.0).timeout
+			fillMissingSelections()
 			resolveNight()
+			
+		GamePhase.DAY:
+			print("Day discussion over, asking players if they want to vote")
+			startDayDecisionVote()
 
 func printAllSelections(selections: Dictionary):
 	print("All Player Selections")
@@ -285,6 +289,48 @@ func startNight() -> void:
 	clientSelections.clear()
 	startSelectionTimer(30)
 	broadcastState()
+
+@rpc("any_peer")
+func sendDayDecision(decision: String):
+	if not multiplayer.is_server():
+		return
+	var peerID = multiplayer.get_remote_sender_id()
+	dayDecisions[peerID] = decision
+	print("Received day decision from", peerID, ":", decision)
+
+func startDayDecisionVote():
+	dayDecisions.clear()
+	for peerID in multiplayer.get_peers():
+		#rpc_id(peerID, "requestDayDecision")
+		ClientManager.rpc_id(peerID, "requestDayDecision")
+
+	await get_tree().create_timer(10.0).timeout
+	resolveDayDecision()
+
+func resolveDayDecision():
+	if not multiplayer.is_server():
+		return
+
+	var voteCount := {
+		"vote": 0,
+		"skip": 0
+	}
+
+	# Count votes from all alive players
+	for peerID in players.keys():
+		var decision: String = dayDecisions.get(peerID, "skip")
+		voteCount[decision] += 1
+
+	print("Day decision results:", voteCount)
+
+	# Majority logic
+	if voteCount["vote"] > voteCount["skip"]:
+		print("Players chose to start voting")
+		startVoting()
+	else:
+		print("Players skipped voting, going to night")
+		startNight()
+
 
 func startDay() -> void:
 	if not multiplayer.is_server():

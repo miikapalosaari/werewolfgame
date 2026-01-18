@@ -228,3 +228,23 @@ func startSyncedTimer(server_start_msec: int, duration_msec: int):
 	syncedTimerEnd = now + remaining
 
 	print("Client synced timer remaining (sec): ", remaining / 1000.0)
+
+
+func hideDayDecisionUI():
+	$DayDecisionsUI/StartVoteButton.visible = false
+	$DayDecisionsUI/SkipButton.visible = false
+
+@rpc("any_peer")
+func requestDayDecision():
+	print("Client: Server requests day decision")
+	$DayDecisionsUI/StartVoteButton.visible = true
+	$DayDecisionsUI/SkipButton.visible = true
+
+
+func _on_start_vote_button_pressed() -> void:
+	GameManager.rpc_id(1, "sendDayDecision", "vote")
+	hideDayDecisionUI()
+
+func _on_skip_button_pressed() -> void:
+	GameManager.rpc_id(1, "sendDayDecision", "skip")
+	hideDayDecisionUI()

@@ -43,8 +43,8 @@ text = "SEND VOTES"
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = 839.0
-offset_right = 924.0
+offset_left = 913.0
+offset_right = 1006.0
 offset_bottom = 94.0
 grow_horizontal = 2
 
@@ -62,4 +62,24 @@ text = "00:00"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="DayDecisionsUI" type="VBoxContainer" parent="."]
+offset_left = 1758.0
+offset_top = 1.0
+offset_right = 1920.0
+offset_bottom = 111.0
+
+[node name="StartVoteButton" type="Button" parent="DayDecisionsUI"]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Start Vote"
+
+[node name="SkipButton" type="Button" parent="DayDecisionsUI"]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Skip"
+
 [connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]
+[connection signal="pressed" from="DayDecisionsUI/StartVoteButton" to="." method="_on_start_vote_button_pressed"]
+[connection signal="pressed" from="DayDecisionsUI/SkipButton" to="." method="_on_skip_button_pressed"]
