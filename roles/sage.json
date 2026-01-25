@@ -5,6 +5,7 @@
 	
 	"actsAtNight": true,
 	"actsAtDay": false,
+	"nightOrder": 10,
 	
 	"nightActions": [
 		{

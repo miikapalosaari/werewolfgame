@@ -32,6 +32,8 @@ var clientSelections: Dictionary = {}
 var selectionTimer: Timer 
 var pendingTimerStart: Dictionary = {}
 var dayDecisions: Dictionary = {}
+var nightOrder: Array = []
+var currentNightActorIndex: int = 0
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -81,9 +83,11 @@ func playerReady():
 func startGame():
 	if not multiplayer.is_server():
 		return
+	currentPhase = GamePhase.NIGHT
 	print("Starting game")
 	currentRound = 1
 	assignRoles()
+	buildNightOrder()
 	startNight()
 	broadcastState()
 	
@@ -258,14 +262,17 @@ func onSelectionTimerTimeout():
 
 	match currentPhase:
 		GamePhase.NIGHT:
-			print("Selecting time over, requesting selections from clients")
-			for peerID in multiplayer.get_peers():
-				rpc_id(peerID, "requestClientSelection")
-			await get_tree().create_timer(2.0).timeout
+			var roleID = nightOrder[currentNightActorIndex]
+			print("Night role finished: ", roleID)
+
+			for peerID in players.keys():
+				if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+					rpc_id(peerID, "requestClientSelection")
+
+			await get_tree().create_timer(1.0).timeout
 			fillMissingSelections()
-			resolveNight()
-			for peerID in multiplayer.get_peers():
-				ClientManager.rpc_id(peerID, "requestClientResetUI")
+			currentNightActorIndex += 1
+			startNextNightRole()
 			
 		GamePhase.DAY:
 			print("Day discussion time over")
@@ -295,13 +302,24 @@ func fillMissingSelections():
 		if not clientSelections.has(peerID):
 			clientSelections[peerID] = {}
 
+func buildNightOrder():
+	nightOrder.clear()
+	for roleID in roles.keys():
+		var role = roles[roleID]
+		if role.get("actsAtNight", false):
+			nightOrder.append(roleID)
+	nightOrder.sort_custom(func(a, b): return roles[a]["nightOrder"] < roles[b]["nightOrder"])
+
 func startNight() -> void:
 	if not multiplayer.is_server():
 		return
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToSleep")
+		print("request sleep for: ", peerID)
 	print("Starting Night Phase")
-	currentPhase = GamePhase.NIGHT
 	clientSelections.clear()
-	startSelectionTimer(30)
+	currentNightActorIndex = 0
+	startNextNightRole()
 	broadcastState()
 
 @rpc("any_peer")
@@ -331,17 +349,18 @@ func resolveDayDecision():
 	# Majority logic
 	if voteCount["vote"] > voteCount["skip"]:
 		print("Players chose to start voting")
-		startVoting()
+		enterVoting()
 	else:
 		print("Players skipped voting, going to night")
-		startNight()
+		enterNight()
 
 
 func startDay() -> void:
 	if not multiplayer.is_server():
 		return
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToWake")
 	print("Starting Day Phase")
-	currentPhase = GamePhase.DAY
 	dayDecisions.clear()
 	clientSelections.clear()
 	for peerID in multiplayer.get_peers():
@@ -353,7 +372,6 @@ func startVoting() -> void:
 	if not multiplayer.is_server():
 		return
 	print("Starting Voting Phase")
-	currentPhase = GamePhase.VOTING
 	clientSelections.clear()
 	startSelectionTimer(15)
 	broadcastState()
@@ -375,6 +393,23 @@ func getMostCommonSelection(selections: Array) -> Dictionary:
 		"count": highest,
 		"tie": mostCommon.size() > 1
 	}
+
+func startNextNightRole():
+	if currentNightActorIndex >= nightOrder.size():
+		resolveNight()
+		return
+
+	var roleID = nightOrder[currentNightActorIndex]
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToSleep")
+	print("Night: waking up ", roleID)
+
+	for peerID in players.keys():
+		if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+			ClientManager.rpc_id(peerID, "requestClientToWake")
+			print("request wake for: ", peerID)
+			rpc_id(peerID, "requestClientSelection")
+	startSelectionTimer(15)
 
 func resolveNight() -> void:
 	if not multiplayer.is_server():
@@ -418,7 +453,7 @@ func resolveNight() -> void:
 		resolveAction(actionType, resolution, collected[actionType])
 			
 	clientSelections.clear()
-	broadcastState()
+	#broadcastState()
 	advancePhase()
 
 func resolveVote() -> void:
@@ -435,14 +470,51 @@ func resolveVote() -> void:
 	resolveMajorityWins("vote", votes)
 	advancePhase()
 
+func enterNight():
+	currentPhase = GamePhase.NIGHT
+	print("== ENTER NIGHT ==")
+
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToSleep")
+
+	clientSelections.clear()
+	currentNightActorIndex = 0
+	buildNightOrder()
+	startNextNightRole()
+	broadcastState()
+
+func enterDay():
+	currentPhase = GamePhase.DAY
+	print("== ENTER DAY ==")
+
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToWake")
+
+	dayDecisions.clear()
+	clientSelections.clear()
+	startSelectionTimer(10)
+	broadcastState()
+
+	for peerID in multiplayer.get_peers():
+		ClientManager.rpc_id(peerID, "requestDayDecision")
+
+func enterVoting():
+	currentPhase = GamePhase.VOTING
+	print("== ENTER VOTING ==")
+
+	clientSelections.clear()
+	startSelectionTimer(15)
+	broadcastState()
+
+
 func advancePhase() -> void:
 	match currentPhase:
 		GamePhase.NIGHT:
-			startDay()
+			enterDay()
 		GamePhase.DAY:
-			startVoting()
+			enterVoting()
 		GamePhase.VOTING:
-			startNight()
+			enterNight()
 
 
 func resolveAction(actionType: String, resolution: String, selections: Array) -> void:

@@ -80,6 +80,31 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "Skip"
 
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="BlackoutOverlay" type="ColorRect" parent="CanvasLayer"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="Label" type="Label" parent="CanvasLayer/BlackoutOverlay"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -226.0
+offset_top = -44.0
+offset_right = 226.0
+offset_bottom = 44.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+text = "You are asleep"
+
 [connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/StartVoteButton" to="." method="_on_start_vote_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/SkipButton" to="." method="_on_skip_button_pressed"]

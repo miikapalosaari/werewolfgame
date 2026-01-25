@@ -13,6 +13,7 @@ var syncedTimerEnd: int = 0
 var pendingTimerStart: Dictionary = {}
 var lastDisplayedTime := ""
 var selectionMode: SelectionMode = SelectionMode.NONE
+var isAwake: bool = false
 
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
@@ -54,11 +55,12 @@ func applyState(state: Dictionary):
 	
 	match localState["phase"]:
 		"Night":
-			selectionMode = SelectionMode.NIGHT_ACTION
 			hideDayDecisionUI()
 		"Day":
+			isAwake = true
 			selectionMode = SelectionMode.NONE
 		"Voting":
+			isAwake = true
 			selectionMode = SelectionMode.VOTE
 			hideDayDecisionUI()
 
@@ -83,10 +85,13 @@ func updatePlayersInRect() -> void:
 	var selfNode: Node = preload("res://scenes/Player.tscn").instantiate()
 	playerRingContainer.add_child(selfNode)
 	var n1: String = selfData["name"]
+	var role: String = selfData["role"];
 	if selfData["alive"]:
 		n1 += "(Alive)"
+		n1 += role
 	else:
-		n1 += "(Not Alive)"
+		n1 += "(Not Alive) "
+		n1 += role
 	selfNode.setup(n1, Color.RED, selfID, Vector2(128, 128))
 	selfNode.connect("playerSelected", Callable(self, "onPlayerSelected"))
 
@@ -272,11 +277,22 @@ func requestDayDecision():
 	$DayDecisionsUI/StartVoteButton.visible = true
 	$DayDecisionsUI/SkipButton.visible = true
 
-
 func resetUI():
 	print("Resetting UI")
 	selectedPlayers.clear()
 	$Label.text = ""
+
+func sleepClient():
+	isAwake = false
+	selectionMode = SelectionMode.NONE
+	print("Client ", localState["selfID"], " sleeping")
+	$CanvasLayer.visible = true
+
+func wakeClient():
+	isAwake = true
+	selectionMode = SelectionMode.NIGHT_ACTION
+	$CanvasLayer.visible = false
+	print("Client ", localState["selfID"],  " woken up as role: ", )
 
 func _on_start_vote_button_pressed() -> void:
 	GameManager.rpc_id(1, "sendDayDecision", "vote")

@@ -27,3 +27,15 @@ func requestClientResetUI():
 		scene.resetUI()
 	else:
 		print("Client: MainScene not ready for resetUI")
+
+@rpc("any_peer")
+func requestClientToSleep():
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("sleepClient"):
+		scene.sleepClient()
+
+@rpc("any_peer")
+func requestClientToWake():
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("wakeClient"):
+		scene.wakeClient()
