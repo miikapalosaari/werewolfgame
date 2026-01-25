@@ -25,6 +25,7 @@ func _ready():
 		startSyncedTimer(t["start"], t["duration"])
 		GameManager.pendingTimerStart.clear()
 	print("Client: MainScene loaded, requesting game state...")
+	GameManager.rpc_id(1, "clientMainSceneLoaded")
 	GameManager.rpc_id(1, "requestFullState")
 	
 func _process(delta):
@@ -245,7 +246,7 @@ func handleVoteSelection(peerID: int) -> void:
 
 @rpc("any_peer")
 func clientSendSelection():
-	print("Client: ", localState["selfID"], " is sending selection: ", selectedPlayers)
+	#print("Client: ", localState["selfID"], " is sending selection: ", selectedPlayers)
 	GameManager.rpc_id(1, "sendClientSelection", selectedPlayers)
 
 func startSyncedTimer(server_start_msec: int, duration_msec: int):
@@ -285,14 +286,12 @@ func resetUI():
 func sleepClient():
 	isAwake = false
 	selectionMode = SelectionMode.NONE
-	print("Client ", localState["selfID"], " sleeping")
 	$CanvasLayer.visible = true
 
 func wakeClient():
 	isAwake = true
 	selectionMode = SelectionMode.NIGHT_ACTION
 	$CanvasLayer.visible = false
-	print("Client ", localState["selfID"],  " woken up as role: ", )
 
 func _on_start_vote_button_pressed() -> void:
 	GameManager.rpc_id(1, "sendDayDecision", "vote")

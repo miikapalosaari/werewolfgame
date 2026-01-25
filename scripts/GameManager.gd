@@ -34,6 +34,7 @@ var pendingTimerStart: Dictionary = {}
 var dayDecisions: Dictionary = {}
 var nightOrder: Array = []
 var currentNightActorIndex: int = 0
+var mainScenesLoaded: Dictionary = {}
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -76,6 +77,17 @@ func playerReady():
 	print("Player ready:", peerID)
 	broadcastState()
 	if checkIfAllReady():
+		rpc("clientStartGame")
+		
+		
+@rpc("any_peer")
+func clientMainSceneLoaded():
+	var peerID = multiplayer.get_remote_sender_id()
+	print("Server: client main scene loaded:", peerID)
+	mainScenesLoaded[peerID] = true
+	
+	if mainScenesLoaded.size() == players.size():
+		print("All clients ready. Starting game logic.")
 		startGame()
 
 # RPC : Start game for clients
@@ -90,8 +102,6 @@ func startGame():
 	buildNightOrder()
 	startNight()
 	broadcastState()
-	
-	rpc("clientStartGame")
 
 @rpc("any_peer")
 func clientStartGame():
@@ -186,6 +196,7 @@ func broadcastState():
 		ClientManager.rpc_id(peerID, "updateState", buildStateSnapshot(peerID))
 
 func resetGame() -> void:
+	mainScenesLoaded.clear()
 	currentPhase = GamePhase.LOBBY
 	currentRound = 0
 	players.clear()
@@ -262,16 +273,8 @@ func onSelectionTimerTimeout():
 
 	match currentPhase:
 		GamePhase.NIGHT:
-			var roleID = nightOrder[currentNightActorIndex]
-			print("Night role finished: ", roleID)
-
-			for peerID in players.keys():
-				if players[peerID]["alive"] and players[peerID]["role"] == roleID:
-					rpc_id(peerID, "requestClientSelection")
-
 			await get_tree().create_timer(1.0).timeout
 			fillMissingSelections()
-			currentNightActorIndex += 1
 			startNextNightRole()
 			
 		GamePhase.DAY:
@@ -395,21 +398,34 @@ func getMostCommonSelection(selections: Array) -> Dictionary:
 	}
 
 func startNextNightRole():
-	if currentNightActorIndex >= nightOrder.size():
-		resolveNight()
-		return
+	# Loop until role with at least one alive player is found, or the end is reached
+	while currentNightActorIndex < nightOrder.size():
+		var roleID = nightOrder[currentNightActorIndex]
+		
+		# Find all alive players with this role
+		var alivePlayersWithRole := []
+		for peerID in players.keys():
+			if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+				alivePlayersWithRole.append(peerID)
+				
+		# Skip roles with no alive players
+		if alivePlayersWithRole.is_empty():
+			print("Skipping role ", roleID, "- no assigned or alive players")
+			currentNightActorIndex += 1
+			continue
 
-	var roleID = nightOrder[currentNightActorIndex]
-	for peerID in players.keys():
-		ClientManager.rpc_id(peerID, "requestClientToSleep")
-	print("Night: waking up ", roleID)
-
-	for peerID in players.keys():
-		if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+		for peerID in players.keys():
+			ClientManager.rpc_id(peerID, "requestClientToSleep")
+		
+		print("Night: waking up ", roleID)
+		for peerID in alivePlayersWithRole:
 			ClientManager.rpc_id(peerID, "requestClientToWake")
 			print("request wake for: ", peerID)
 			rpc_id(peerID, "requestClientSelection")
-	startSelectionTimer(15)
+		currentNightActorIndex += 1
+		startSelectionTimer(15)
+		return
+	resolveNight()
 
 func resolveNight() -> void:
 	if not multiplayer.is_server():
