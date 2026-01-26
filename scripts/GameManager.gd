@@ -245,6 +245,7 @@ func sendClientSelection(selection: Dictionary):
 	receiveClientSelection(peerID, selection)
 
 func receiveClientSelection(peerID: int, selection: Dictionary) -> void:
+	print("SERVER RECEIVED:", peerID, selection)
 	clientSelections[peerID] = selection
 
 @rpc("any_peer")
@@ -273,8 +274,11 @@ func onSelectionTimerTimeout():
 
 	match currentPhase:
 		GamePhase.NIGHT:
+			for peerID in multiplayer.get_peers():
+				rpc_id(peerID, "requestClientSelection")
 			await get_tree().create_timer(1.0).timeout
 			fillMissingSelections()
+			currentNightActorIndex += 1
 			startNextNightRole()
 			
 		GamePhase.DAY:
@@ -398,34 +402,35 @@ func getMostCommonSelection(selections: Array) -> Dictionary:
 	}
 
 func startNextNightRole():
-	# Loop until role with at least one alive player is found, or the end is reached
-	while currentNightActorIndex < nightOrder.size():
-		var roleID = nightOrder[currentNightActorIndex]
-		
-		# Find all alive players with this role
-		var alivePlayersWithRole := []
-		for peerID in players.keys():
-			if players[peerID]["alive"] and players[peerID]["role"] == roleID:
-				alivePlayersWithRole.append(peerID)
-				
-		# Skip roles with no alive players
-		if alivePlayersWithRole.is_empty():
-			print("Skipping role ", roleID, "- no assigned or alive players")
-			currentNightActorIndex += 1
-			continue
-
-		for peerID in players.keys():
-			ClientManager.rpc_id(peerID, "requestClientToSleep")
-		
-		print("Night: waking up ", roleID)
-		for peerID in alivePlayersWithRole:
-			ClientManager.rpc_id(peerID, "requestClientToWake")
-			print("request wake for: ", peerID)
-			rpc_id(peerID, "requestClientSelection")
-		currentNightActorIndex += 1
-		startSelectionTimer(15)
+	if currentNightActorIndex >= nightOrder.size():
+		resolveNight()
 		return
-	resolveNight()
+
+	var roleID = nightOrder[currentNightActorIndex]
+	
+	# Find all alive players with this role
+	var alivePlayersWithRole := []
+	for peerID in players.keys():
+		if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+			alivePlayersWithRole.append(peerID)
+			
+	# Skip roles with no alive players
+	if alivePlayersWithRole.is_empty():
+		print("Skipping role ", roleID, "- no assigned or alive players")
+		currentNightActorIndex += 1
+		startNextNightRole()
+		return
+
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "requestClientToSleep")
+	
+	print("Night: waking up ", roleID)
+	for peerID in alivePlayersWithRole:
+		ClientManager.rpc_id(peerID, "requestClientToWake")
+		print("request wake for: ", peerID)
+		
+	startSelectionTimer(15)
+	broadcastState()
 
 func resolveNight() -> void:
 	if not multiplayer.is_server():
@@ -469,7 +474,7 @@ func resolveNight() -> void:
 		resolveAction(actionType, resolution, collected[actionType])
 			
 	clientSelections.clear()
-	#broadcastState()
+	checkWinConditions()
 	advancePhase()
 
 func resolveVote() -> void:
@@ -484,6 +489,7 @@ func resolveVote() -> void:
 			votes.append(sel["vote"])
 
 	resolveMajorityWins("vote", votes)
+	checkWinConditions()
 	advancePhase()
 
 func enterNight():
@@ -576,3 +582,32 @@ func resolveIndividual(actionType: String, selections: Array) -> void:
 					for actorID in clientSelections.keys():
 						if clientSelections[actorID].get(actionType) == targetID:
 							print("Player ", actorID, " selected ", targetID, " -> role: ", targetRole)
+
+
+func checkWinConditions() -> void:
+	if not multiplayer.is_server():
+		return
+	
+	var aliveTeams: Dictionary = {}
+	
+	for peerID in players.keys():
+		if players[peerID]["alive"]:
+			var roleID = players[peerID]["role"]
+			var role = roles[roleID]
+			var team = role.get("team", "neutral")
+			
+			if team != "neutral":
+				aliveTeams[team] = aliveTeams.get(team, 0) + 1
+				
+	if aliveTeams.get("werewolves", 0) == 0:
+		endGame("villagers")
+	elif aliveTeams.get("villagers", 0) <= aliveTeams.get("werewolves", 0):
+		endGame("werewolves")
+
+func endGame(winner: String) -> void:
+	print("=== GAME OVER ===")
+	print("Winner:", winner)
+
+	# TODO: Broadcast to all clients
+
+	resetGame()

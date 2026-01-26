@@ -246,7 +246,7 @@ func handleVoteSelection(peerID: int) -> void:
 
 @rpc("any_peer")
 func clientSendSelection():
-	#print("Client: ", localState["selfID"], " is sending selection: ", selectedPlayers)
+	print("Client: ", multiplayer.get_unique_id(), " is sending selection: ", selectedPlayers)
 	GameManager.rpc_id(1, "sendClientSelection", selectedPlayers)
 
 func startSyncedTimer(server_start_msec: int, duration_msec: int):
