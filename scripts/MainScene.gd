@@ -14,10 +14,12 @@ var pendingTimerStart: Dictionary = {}
 var lastDisplayedTime := ""
 var selectionMode: SelectionMode = SelectionMode.NONE
 var isAwake: bool = false
+var fadeTween: Tween
 
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
 @onready var layoutRect: Node = $PlayerContainer/LayoutRect
+@onready var fadeRect: ColorRect = $FadeCanvasLayer/FadeColorRect
 
 func _ready():
 	if GameManager.pendingTimerStart.size() > 0:
@@ -248,6 +250,51 @@ func handleVoteSelection(peerID: int) -> void:
 func clientSendSelection():
 	print("Client: ", multiplayer.get_unique_id(), " is sending selection: ", selectedPlayers)
 	GameManager.rpc_id(1, "sendClientSelection", selectedPlayers)
+
+func clientStartSyncedTransition(server_start_msec: int, duration_msec: int, transition_type: String, phase: String):
+	var now = Time.get_ticks_msec()
+	var elapsed = now - server_start_msec
+
+	var remaining = duration_msec - elapsed
+
+	# Clamp for late joiners
+	if remaining < 0:
+		remaining = 0
+	if remaining > duration_msec:
+		remaining = duration_msec
+
+	var remainingSeconds = remaining / 1000.0
+
+	print("Client synced transition:", transition_type, "phase:", phase, "remaining:", remainingSeconds)
+
+	match transition_type:
+		"fadeOut":
+			fadeOut(remainingSeconds)
+		"fadeIn":
+			fadeIn(remainingSeconds)
+
+func fadeOut(duration: float):
+	if fadeTween:
+		fadeTween.kill()
+	
+	fadeRect.visible = true
+	fadeRect.modulate.a = 0.0
+	
+	fadeTween = create_tween()
+	fadeTween.tween_property(fadeRect, "modulate:a", 1.0, duration)
+	
+func fadeIn(duration: float):
+	if fadeTween:
+		fadeTween.kill()
+		
+	fadeRect.visible = true
+	fadeRect.modulate.a = 1.0
+		
+	fadeTween = create_tween()
+	fadeTween.tween_property(fadeRect, "modulate:a", 0.0, duration)
+	fadeTween.finished.connect(func():
+		fadeRect.visible = false
+	)
 
 func startSyncedTimer(server_start_msec: int, duration_msec: int):
 	var now = Time.get_ticks_msec()

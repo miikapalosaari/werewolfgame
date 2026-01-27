@@ -105,6 +105,14 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 64
 text = "You are asleep"
 
+[node name="FadeCanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="FadeColorRect" type="ColorRect" parent="FadeCanvasLayer"]
+visible = false
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0, 0, 0, 1)
+
 [connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/StartVoteButton" to="." method="_on_start_vote_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/SkipButton" to="." method="_on_skip_button_pressed"]

@@ -16,6 +16,13 @@ const GamePhaseNames := {
 	GamePhase.ENDED: "Ended"
 }
 
+enum NightTransitionState {
+	IDLE,
+	FADE_IN,
+	SELECTION,
+	FADE_OUT
+}
+
 func getCurrentPhaseString() -> String:
 	return GamePhaseNames[currentPhase]
 
@@ -35,6 +42,10 @@ var dayDecisions: Dictionary = {}
 var nightOrder: Array = []
 var currentNightActorIndex: int = 0
 var mainScenesLoaded: Dictionary = {}
+var transitionTimer: Timer
+var nextPhaseTransition: GamePhase
+var currentNightTransitionState: NightTransitionState = NightTransitionState.IDLE
+var pendingSelectionDuration: float = 15.0
 
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
@@ -55,6 +66,11 @@ func _ready() -> void:
 	selectionTimer.one_shot = true
 	add_child(selectionTimer)
 	selectionTimer.connect("timeout", Callable(self, "onSelectionTimerTimeout"))
+	
+	transitionTimer = Timer.new()
+	transitionTimer.one_shot = true
+	add_child(transitionTimer)
+	transitionTimer.connect("timeout", Callable(self, "onTransitionTimerTimeout"))
 
 # RPC : Client can request full state
 @rpc("any_peer")
@@ -274,29 +290,100 @@ func onSelectionTimerTimeout():
 
 	match currentPhase:
 		GamePhase.NIGHT:
+			# Selection timer finished → request selections from clients
 			for peerID in multiplayer.get_peers():
 				rpc_id(peerID, "requestClientSelection")
-			await get_tree().create_timer(1.0).timeout
+
+			await get_tree().create_timer(1.0).timeout # give clients a moment to send selections
 			fillMissingSelections()
-			currentNightActorIndex += 1
-			startNextNightRole()
+
+			# Now fade out all actors
+			currentNightTransitionState = NightTransitionState.FADE_OUT
+			startTransition(1.0, "fadeOut")
 			
 		GamePhase.DAY:
 			print("Day discussion time over")
 			await get_tree().create_timer(2.0).timeout
 			resolveDayDecision()
-			for peerID in multiplayer.get_peers():
-				ClientManager.rpc_id(peerID, "requestClientResetUI")
 				
 		GamePhase.VOTING:
-			print("Selecting time over, requesting selections from clients")
+			print("Voting time over")
 			for peerID in multiplayer.get_peers():
 				rpc_id(peerID, "requestClientSelection")
 			await get_tree().create_timer(2.0).timeout
 			fillMissingSelections()
 			resolveVote()
-			for peerID in multiplayer.get_peers():
-				ClientManager.rpc_id(peerID, "requestClientResetUI")
+
+
+@rpc("any_peer")
+func startSyncedTransition(server_start_msec: int, duration_msec: int, transition_type: String, phase: String):
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("clientStartSyncedTransition"):
+		scene.clientStartSyncedTransition(server_start_msec, duration_msec, transition_type, phase)
+	else:
+		pendingTimerStart = {
+			"start": server_start_msec,
+			"duration": duration_msec,
+			"type": transition_type,
+			"phase": phase
+		}
+
+func startTransition(seconds: float, transition_type):
+	if not multiplayer.is_server():
+		return
+
+	var now = Time.get_ticks_msec()
+	var duration = int(seconds * 1000)
+	rpc("startSyncedTransition", now, duration, transition_type, getCurrentPhaseString())
+	transitionTimer.wait_time = seconds
+	transitionTimer.start()
+
+
+func onTransitionTimerTimeout():
+	if not multiplayer.is_server():
+		return
+
+	match currentNightTransitionState:
+		NightTransitionState.FADE_IN:
+			# Fade-in finished → start selection timer
+			currentNightTransitionState = NightTransitionState.SELECTION
+
+			# Night actor selection timer
+			if currentPhase == GamePhase.NIGHT:
+				startSelectionTimer(pendingSelectionDuration)
+			# Day discussion timer
+			elif currentPhase == GamePhase.DAY:
+				startSelectionTimer(10)  # or your desired day discussion duration
+			# Voting timer
+			elif currentPhase == GamePhase.VOTING:
+				startSelectionTimer(15)  # voting phase duration
+
+		NightTransitionState.FADE_OUT:
+			# Fade-out finished → next night actor or next phase
+			if currentPhase == GamePhase.NIGHT:
+				currentNightActorIndex += 1
+				if currentNightActorIndex < nightOrder.size():
+					startNextNightRole()  # triggers next actor fade-in
+				else:
+					# Last night actor finished → enter Day with fade-in
+					currentNightTransitionState = NightTransitionState.FADE_IN
+					enterDay()
+			elif currentPhase == GamePhase.DAY:
+				resolveDayDecision()
+				for peerID in multiplayer.get_peers():
+					ClientManager.rpc_id(peerID, "requestClientResetUI")
+			elif currentPhase == GamePhase.VOTING:
+				fillMissingSelections()
+				resolveVote()
+				for peerID in multiplayer.get_peers():
+					ClientManager.rpc_id(peerID, "requestClientResetUI")
+
+
+func transitionToPhase(nextPhase: GamePhase):
+	if not multiplayer.is_server():
+		return
+	nextPhaseTransition = nextPhase
+	startTransition(2.0, "fadeOut")
 
 func printAllSelections(selections: Dictionary):
 	print("All Player Selections")
@@ -362,26 +449,25 @@ func resolveDayDecision():
 		enterNight()
 
 
-func startDay() -> void:
-	if not multiplayer.is_server():
-		return
-	for peerID in players.keys():
-		ClientManager.rpc_id(peerID, "requestClientToWake")
-	print("Starting Day Phase")
-	dayDecisions.clear()
-	clientSelections.clear()
-	for peerID in multiplayer.get_peers():
-		ClientManager.rpc_id(peerID, "requestDayDecision")
-	startSelectionTimer(60)
-	broadcastState()
-
-func startVoting() -> void:
-	if not multiplayer.is_server():
-		return
-	print("Starting Voting Phase")
-	clientSelections.clear()
-	startSelectionTimer(15)
-	broadcastState()
+#func startDay() -> void:
+	#if not multiplayer.is_server():
+		#return
+	#for peerID in players.keys():
+		#ClientManager.rpc_id(peerID, "requestClientToWake")
+	#print("Starting Day Phase")
+	#dayDecisions.clear()
+	#clientSelections.clear()
+	#for peerID in multiplayer.get_peers():
+		#ClientManager.rpc_id(peerID, "requestDayDecision")
+	#broadcastState()
+#
+#func startVoting() -> void:
+	#if not multiplayer.is_server():
+		#return
+	#print("Starting Voting Phase")
+	#clientSelections.clear()
+	#startSelectionTimer(15)
+	#broadcastState()
 
 func getMostCommonSelection(selections: Array) -> Dictionary:
 	var counts: Dictionary = {}
@@ -429,8 +515,9 @@ func startNextNightRole():
 		ClientManager.rpc_id(peerID, "requestClientToWake")
 		print("request wake for: ", peerID)
 		
-	startSelectionTimer(15)
-	broadcastState()
+	# Start fade-in before selection timer
+	currentNightTransitionState = NightTransitionState.FADE_IN
+	startTransition(1.0, "fadeIn")
 
 func resolveNight() -> void:
 	if not multiplayer.is_server():
@@ -514,7 +601,10 @@ func enterDay():
 
 	dayDecisions.clear()
 	clientSelections.clear()
-	startSelectionTimer(10)
+	
+	currentNightTransitionState = NightTransitionState.FADE_IN
+	startTransition(1.0, "fadeIn")
+	
 	broadcastState()
 
 	for peerID in multiplayer.get_peers():
@@ -525,7 +615,6 @@ func enterVoting():
 	print("== ENTER VOTING ==")
 
 	clientSelections.clear()
-	startSelectionTimer(15)
 	broadcastState()
 
 
