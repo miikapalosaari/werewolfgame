@@ -15,7 +15,7 @@ func applyState(state: Dictionary):
 	updatePlayerList(state["players"], state.get("leader"))
 	buildRoleSettingsUI(state["roles"])
 
-func updatePlayerList(players: Dictionary, leader_id):
+func updatePlayerList(players: Dictionary, leaderID):
 	# Clear old labels
 	for child in playerList.get_children():
 		child.queue_free()
@@ -23,21 +23,41 @@ func updatePlayerList(players: Dictionary, leader_id):
 	# Add a simple label for each player
 	for id in players.keys():
 		var data = players[id]
-		var label = Label.new()
-		label.custom_minimum_size.y = 40
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override("font_size", 36)
-		var ready_text = "Not Ready"
-		if data["ready"]:
-			ready_text = "Ready"
-
-		var leader_text = ""
-		if id == leader_id:
-			leader_text = " (Leader)"
-			
-		label.text = data["name"] + " - " + ready_text + leader_text
-		playerList.add_child(label)
+		
+		var row = HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.custom_minimum_size.y = 40
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		
+		var playerLabel = Label.new()
+		playerLabel.text = data["name"]
+		playerLabel.add_theme_font_size_override("font_size", 36)
+		playerLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		playerLabel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var playerColor: Color = localState.get("playerColors", {}).get(id, Color.WHITE)
+		playerLabel.add_theme_color_override("font_color", playerColor)
+		row.add_child(playerLabel)
+		
+		var readyLabel = Label.new()
+		readyLabel.text = "Ready" if data["ready"] else "Not Ready"
+		readyLabel.add_theme_font_size_override("font_size", 36)
+		readyLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		readyLabel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var readyColor: Color = Color.GREEN if data["ready"] else Color.RED
+		readyLabel.add_theme_color_override("font_color", readyColor)
+		row.add_child(readyLabel)
+		
+		if id == leaderID:
+			var leaderLabel = Label.new()
+			leaderLabel.text = " (Leader)"
+			leaderLabel.add_theme_font_size_override("font_size", 36)
+			leaderLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			leaderLabel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var leaderColor: Color = Color.YELLOW
+			leaderLabel.add_theme_color_override("font_color", leaderColor)
+			row.add_child(leaderLabel)
+		
+		playerList.add_child(row)
 		
 func buildRoleSettingsUI(roles: Dictionary):
 	for child in roleSettings.get_children():
