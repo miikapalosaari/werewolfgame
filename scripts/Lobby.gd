@@ -4,6 +4,9 @@ extends Control
 @onready var roleSettings = $RoleSettingsContainer
 var localState: Dictionary = {}
 
+func _ready() -> void:
+	GameManager.rpc_id(1, "requestFullState")
+
 func applyState(state: Dictionary):
 	localState = state
 	

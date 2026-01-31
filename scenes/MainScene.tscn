@@ -133,5 +133,30 @@ theme_override_font_sizes/font_size = 32
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 
+[node name="WinnerLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="BackgroundRect" type="ColorRect" parent="WinnerLayer"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.28485, 0.28485, 0.28485, 1)
+
+[node name="Label" type="Label" parent="WinnerLayer/BackgroundRect"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.66147, 0.512681, 0, 1)
+theme_override_font_sizes/font_size = 128
+horizontal_alignment = 1
+
 [connection signal="pressed" from="DayDecisionsUI/StartVoteButton" to="." method="_on_start_vote_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/SkipButton" to="." method="_on_skip_button_pressed"]

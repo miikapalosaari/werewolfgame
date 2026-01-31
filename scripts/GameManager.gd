@@ -255,9 +255,29 @@ func resetGame() -> void:
 	mainScenesLoaded.clear()
 	currentPhase = GamePhase.LOBBY
 	currentRound = 0
-	players.clear()
-	lobbyLeader = -1
+	clientSelections.clear()
+	dayDecisions.clear()
+	pendingTimerStart.clear()
+	phaseLocked = false
+	currentNightActorIndex = 0
+	alivePlayersWithRole.clear()
+	nightOrder.clear()
+	currentNightRole = ""
 	
+	# Reset players
+	for peerID in players.keys():
+		players[peerID]["ready"] = false
+		players[peerID]["alive"] = true
+		players[peerID]["role"] = ""
+	
+	if players.size() > 0 and not players.has(lobbyLeader):
+		lobbyLeader = pickNewLeader()
+	
+	for peerID in multiplayer.get_peers():
+		ClientManager.rpc_id(peerID, "returnToLobby")
+	
+	broadcastState()
+
 func pickNewLeader() -> int:
 	if players.is_empty():
 		return -1
@@ -332,6 +352,11 @@ func onSelectionTimerTimeout():
 func enterPhase(phase: GamePhase):
 	if not multiplayer.is_server():
 		return
+		
+	if currentPhase == GamePhase.ENDED:
+		debugPhase("Game ended, ignoring enterPhase")
+		return
+		
 	if phaseLocked:
 		debugPhase("Phase locked, cannot enter new phase: " + str(phase))
 		return
@@ -707,25 +732,42 @@ func checkWinConditions() -> void:
 	var aliveTeams: Dictionary = {}
 	
 	for peerID in players.keys():
-		if players[peerID]["alive"]:
-			var roleID = players[peerID]["role"]
-			var role = roles[roleID]
-			var team = role.get("team", "neutral")
-			
-			if team != "neutral":
-				aliveTeams[team] = aliveTeams.get(team, 0) + 1
+		if not players[peerID]["alive"]:
+				continue
+				
+		var roleID = players[peerID]["role"]
+		
+		if roleID == "" or not roles.has(roleID):
+			continue
+		
+		var role = roles[roleID]
+		var team = role.get("team", "neutral")
+		
+		if team != "neutral":
+			aliveTeams[team] = aliveTeams.get(team, 0) + 1
 				
 	if aliveTeams.get("werewolves", 0) == 0:
 		currentPhase = GamePhase.ENDED
-		endGame("villagers")
+		endGame("Villagers")
 	elif aliveTeams.get("villagers", 0) <= aliveTeams.get("werewolves", 0):
 		currentPhase = GamePhase.ENDED
-		endGame("werewolves")
+		endGame("Werewolves")
 
 func endGame(winner: String) -> void:
 	print("=== GAME OVER ===")
 	print("Winner:", winner)
+	
+	startTransition(2.0, "fadeOut")
+	await transitionTimer.timeout
 
-	# TODO: Broadcast to all clients
+	for peerID in players.keys():
+		ClientManager.rpc_id(peerID, "onGameEnded", winner)
+	
+	startTransition(2.0, "fadeIn")
+	await transitionTimer.timeout
+	
+	currentPhase = GamePhase.ENDED
+	phaseLocked = true
 
+	await get_tree().create_timer(5.0).timeout
 	resetGame()

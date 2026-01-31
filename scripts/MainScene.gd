@@ -365,6 +365,10 @@ func wakeClient():
 	selectionMode = SelectionMode.NIGHT_ACTION
 	$CanvasLayer.visible = false
 
+func showGameOver(winner: String):
+	$WinnerLayer/BackgroundRect/Label.text = winner + " Won!"
+	$WinnerLayer.visible = true
+
 func _on_start_vote_button_pressed() -> void:
 	GameManager.rpc_id(1, "sendDayDecision", "vote")
 	hideDayDecisionUI()

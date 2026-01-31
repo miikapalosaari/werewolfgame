@@ -39,3 +39,18 @@ func requestClientToWake():
 	var scene = get_tree().current_scene
 	if scene and scene.has_method("wakeClient"):
 		scene.wakeClient()
+
+@rpc("any_peer")
+func onGameEnded(winner: String):
+	print("Game ended! Winner:", winner)
+	var scene = get_tree().current_scene
+	if scene and scene.has_method("showGameOver"):
+		scene.showGameOver(winner)
+
+@rpc("any_peer")
+func returnToLobby():
+	print("Returning to lobby")
+	var scene = get_tree().current_scene
+	if scene and scene.has_node("WinnerLayer"):
+		scene.get_node("WinnerLayer").visible = false
+	get_tree().change_scene_to_file("res://scenes/LobbyScene.tscn")
