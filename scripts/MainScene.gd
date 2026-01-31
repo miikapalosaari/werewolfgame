@@ -16,6 +16,8 @@ var selectionMode: SelectionMode = SelectionMode.NONE
 var isAwake: bool = false
 var fadeTween: Tween
 
+var playerNodes: Dictionary = {}
+
 @onready var playerList: Node = $VBoxContainer
 @onready var playerRingContainer: Node = $PlayerContainer
 @onready var layoutRect: Node = $PlayerContainer/LayoutRect
@@ -72,6 +74,7 @@ func updatePlayersInRect() -> void:
 	for child in playerRingContainer.get_children():
 		if child != layoutRect:
 			child.queue_free()
+	playerNodes.clear()
 
 	var players: Dictionary = localState["players"]
 	if players.is_empty():
@@ -82,6 +85,7 @@ func updatePlayersInRect() -> void:
 		return
 
 	var rect: Rect2 = layoutRect.get_global_rect()
+	var rectLocal: Rect2 = layoutRect.get_rect()
 
 	# Place SELF (bottom center)
 	var selfData: Dictionary = players[selfID]
@@ -97,14 +101,14 @@ func updatePlayersInRect() -> void:
 		n1 += role
 	selfNode.setup(n1, Color.RED, selfID, Vector2(128, 128))
 	selfNode.connect("playerSelected", Callable(self, "onPlayerSelected"))
+	playerNodes[selfID] = selfNode
 
 	var bottomCenter: Vector2 = Vector2(
-		rect.position.x + rect.size.x * 0.5,
-		rect.end.y
+		rectLocal.position.x + rectLocal.size.x * 0.5,
+		rectLocal.position.y + rectLocal.size.y
 	)
-	
-	var half: Vector2 = selfNode.getRectSize() * 0.5
-	selfNode.position = bottomCenter - half
+	selfNode.position = bottomCenter
+	selfNode.setFacingFromTable("bottom")
 
 	var otherIDs: Array = players.keys()
 	otherIDs.erase(selfID)
@@ -118,29 +122,15 @@ func updatePlayersInRect() -> void:
 	var maxSidePlayers: int = 6
 
 	# Dynamically calculate counts
-	var topCount: int = totalOthers
-	if topCount > maxTopPlayers:
-		topCount = maxTopPlayers
+	var topCount: int = min(totalOthers, maxTopPlayers)
 	var remaining = totalOthers - topCount
-
-	var leftCount := int(remaining / 2)
-	if leftCount > maxSidePlayers:
-		leftCount = maxSidePlayers
-
-	var rightCount: int = remaining - leftCount
-	if rightCount > maxSidePlayers:
-		rightCount = maxSidePlayers
-
-	var centerX: float = rect.position.x + rect.size.x * 0.5
-	var topY: float = rect.position.y
-	var leftX: float = rect.position.x
-	var rightX: float = rect.end.x
+	var leftCount: int = min(int(remaining / 2), maxSidePlayers)
+	var rightCount: int = min(remaining - leftCount, maxSidePlayers)
 
 	var playerSize: = Vector2(96, 96)
 	var margin: int = 32
-	var topSpacing: float = rect.size.x / float(topCount + 1)
-	var leftSpacing: float = playerSize.y + margin
-	var rightSpacing: float = playerSize.y + margin
+	var topSpacing: float = rectLocal.size.x / float(topCount + 1)
+	var sideSpacing: float = playerSize.y + margin
 
 	var index: int = 0
 
@@ -153,18 +143,19 @@ func updatePlayersInRect() -> void:
 			n += "(Alive)"
 		else:
 			n += "(Not Alive)"
-		var x: float = rect.position.x + (i + 1) * topSpacing
-		var y: float = topY
-		var hue: float = fmod(index * 0.61, 1.0)
-		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
+		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
 
 		var node: Node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(n, color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, playerSize)
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
-		var half2: Vector2 = node.getRectSize() * 0.5
-		node.position = Vector2(x, y) - half2
+		playerNodes[peerID] = node
+		
+		var targetLocal = Vector2(rectLocal.position.x + (i + 1) * topSpacing + playerSize.x * 0.5, rectLocal.position.y)
+		node.position = targetLocal - node.getRectSize() * 0.5
+		node.setFacingFromTable("top")
 		index += 1
+
 
 	# Left side
 	for i in range(leftCount):
@@ -175,17 +166,17 @@ func updatePlayersInRect() -> void:
 			n += "(Alive)"
 		else:
 			n += "(Not Alive)"
-		var x: float = leftX
-		var y: float = rect.position.y + (i + 1) * leftSpacing
-		var hue: float = fmod(index * 0.61, 1.0)
-		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
+		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(n, color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, playerSize)
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
-		var half3: Vector2 = node.getRectSize() * 0.5
-		node.position = Vector2(x, y) - half3
+		playerNodes[peerID] = node
+		
+		var targetLocal = Vector2(rectLocal.position.x, rectLocal.position.y + (i + 1) * sideSpacing)
+		node.position = playerRingContainer.to_local(targetLocal - node.getRectSize() * 0.5)
+		node.setFacingFromTable("left")
 		index += 1
 
 	# Right side
@@ -197,23 +188,28 @@ func updatePlayersInRect() -> void:
 			n += "(Alive)"
 		else:
 			n += "(Not Alive)"
-		var x: float = rightX
-		var y: float = rect.position.y + (i + 1) * rightSpacing
-		var hue: float = fmod(index * 0.61, 1.0)
-		var color: Color = Color.from_hsv(hue, 0.75, 0.9)
+		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
-		node.setup(n, color, peerID, Vector2(96, 96))
+		node.setup(n, color, peerID, playerSize)
 		node.connect("playerSelected", Callable(self, "onPlayerSelected"))
-		var half4: Vector2 = node.getRectSize() * 0.5
-		node.position = Vector2(x, y) - half4
+		playerNodes[peerID] = node
+		
+		var targetLocal = Vector2(rectLocal.position.x + rectLocal.size.x + playerSize.x, rectLocal.position.y + (i + 1) * sideSpacing)
+		node.position = playerRingContainer.to_local(targetLocal - node.getRectSize() * 0.5)
+		node.setFacingFromTable("right")
 		index += 1
 
 func onPlayerSelected(peerID: int) -> void:
 	if not localState["players"][peerID]["alive"]:
 		print("Cannot select dead player")
 		return
+	
+	if peerID == localState["selfID"]:
+		print("Cannot select yourself")
+		return
+
 		
 	match selectionMode:
 		SelectionMode.NIGHT_ACTION:
@@ -237,14 +233,24 @@ func handleNightActionSelection(peerID: int) -> void:
 		selectedPlayers.erase(actionType)
 	else:
 		selectedPlayers[actionType] = peerID
-	$Label.text = str(selectedPlayers)
+	updatePlayerHighlights()
 
 func handleVoteSelection(peerID: int) -> void:
 	if selectedPlayers.get("vote") == peerID:
 		selectedPlayers.erase("vote")
 	else:
 		selectedPlayers["vote"] = peerID
-	$Label.text = str(selectedPlayers)
+	updatePlayerHighlights()
+
+func updatePlayerHighlights():
+	for id in playerNodes.keys():
+		playerNodes[id].setSelected(false)
+
+	for key in selectedPlayers.keys():
+		var pid = selectedPlayers[key]
+		if playerNodes.has(pid):
+			playerNodes[pid].setSelected(true)
+
 
 @rpc("any_peer")
 func clientSendSelection():
@@ -328,7 +334,7 @@ func requestDayDecision():
 func resetUI():
 	print("Resetting UI")
 	selectedPlayers.clear()
-	$Label.text = ""
+	updatePlayerHighlights()
 
 func sleepClient():
 	isAwake = false

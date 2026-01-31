@@ -1,29 +1,69 @@
-[gd_scene load_steps=2 format=3 uid="uid://c0hrdf8eni5qm"]
+[gd_scene load_steps=5 format=3 uid="uid://c0hrdf8eni5qm"]
 
 [ext_resource type="Script" path="res://scripts/Player.gd" id="1_2r2ib"]
+[ext_resource type="Texture2D" uid="uid://b0yb7ki24sqsd" path="res://images/characterBase.png" id="2_t8enp"]
+[ext_resource type="Texture2D" uid="uid://scfjjyxjbgr8" path="res://images/characterHighlight.png" id="3_v74yg"]
+[ext_resource type="Texture2D" uid="uid://dddvnhf3na508" path="res://images/characterHatColor.png" id="4_lrf76"]
 
 [node name="Player" type="Node2D"]
 script = ExtResource("1_2r2ib")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="CharacterBaseRect" type="TextureRect" parent="."]
+texture_filter = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 offset_left = -16.0
 offset_top = -16.0
 offset_right = 16.0
 offset_bottom = 16.0
-mouse_filter = 2
-
-[node name="Label" type="Label" parent="ColorRect"]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -46.0
-offset_top = -51.0
-offset_right = 46.0
-offset_bottom = -28.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_t8enp")
+
+[node name="Label" type="Label" parent="CharacterBaseRect"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -46.0
+offset_right = 46.0
+offset_bottom = 23.0
+grow_horizontal = 2
 text = "1234567890"
 horizontal_alignment = 1
+
+[node name="CharacterHighlightRect" type="TextureRect" parent="."]
+texture_filter = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_v74yg")
+
+[node name="CharacterHatColorRect" type="TextureRect" parent="."]
+texture_filter = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_lrf76")
