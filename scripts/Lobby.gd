@@ -2,6 +2,7 @@ extends Control
 
 @onready var playerList = $Panel/ScrollContainer/PlayerList
 @onready var roleSettings = $RolePanel/RoleSettingsContainer
+var totalPlayers: int = 0
 var localState: Dictionary = {}
 
 func _ready() -> void:
@@ -12,6 +13,8 @@ func applyState(state: Dictionary):
 	
 	if not state.has("players"):
 		return
+		
+	totalPlayers = state["players"].size()
 	updatePlayerList(state["players"], state.get("leader"))
 	buildRoleSettingsUI(state["roles"])
 
@@ -72,29 +75,73 @@ func buildRoleSettingsUI(roles: Dictionary):
 	for roleID in roles.keys():
 		var row = HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.custom_minimum_size.y = 40
 
 		var label = Label.new()
 		label.text = roleID
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.add_theme_font_size_override("font_size", 36)
 		row.add_child(label)
+		
+		var valueLabel = Label.new()
+		valueLabel.text = str(counts.get(roleID, 0))
+		valueLabel.size_flags_horizontal = Control.SIZE_FILL
+		valueLabel.add_theme_font_size_override("font_size", 36)
+		row.add_child(valueLabel)
 
 		if iAmLeader:
-			var input = SpinBox.new()
-			input.min_value = 0
-			input.max_value = 20
-			input.name = roleID
-			input.value = counts.get(roleID, 0)
-			input.connect("value_changed", Callable(self, "_on_spinbox_value_changed").bind(roleID))
-			row.add_child(input)
-		else:
-			var valueLabel = Label.new()
-			valueLabel.text = str(counts.get(roleID, 0))
-			valueLabel.size_flags_horizontal = Control.SIZE_FILL
-			row.add_child(valueLabel)
+			var minusButton = Button.new()
+			minusButton.text = "-"
+			minusButton.size_flags_horizontal = Control.SIZE_FILL
+			minusButton.size_flags_vertical = Control.SIZE_FILL
+			minusButton.add_theme_font_size_override("font_size", 36)
+			minusButton.connect("pressed", Callable(self, "_on_role_value_button_pressed").bind(roleID, -1, valueLabel))
+			minusButton.custom_minimum_size = Vector2(40, 40)
+			row.add_child(minusButton)
+
+			var plusButton = Button.new()
+			plusButton.text = "+"
+			plusButton.size_flags_horizontal = Control.SIZE_FILL
+			plusButton.size_flags_vertical = Control.SIZE_FILL
+			plusButton.add_theme_font_size_override("font_size", 36)
+			plusButton.connect("pressed", Callable(self, "_on_role_value_button_pressed").bind(roleID, 1, valueLabel))
+			plusButton.custom_minimum_size = Vector2(40, 40)
+			row.add_child(plusButton)
 		roleSettings.add_child(row)
 
 func _on_ready_button_pressed() -> void:
 	GameManager.rpc_id(1, "playerReady")
 
-func _on_spinbox_value_changed(value, roleID):
+func updatePlusButtons():
+	var counts = localState.get("roleCounts", {})
+	var totalRoles = 0
+	for rID in counts.keys():
+		totalRoles += int(counts[rID])
+
+	for row in roleSettings.get_children():
+		for child in row.get_children():
+			if child is Button and child.text == "+":
+				child.disabled = totalRoles >= totalPlayers
+
+
+func _on_role_value_button_pressed(roleID: String, delta: int, valueLabel: Label):
+	var current = int(valueLabel.text)
+	
+	var totalRoles = 0
+	for rID in localState.get("roleCounts", {}):
+		if rID == roleID:
+			totalRoles += max(0, current + delta)
+		else:
+			totalRoles += int(localState["roleCounts"].get(rID, 0))
+	
+	if totalRoles > totalPlayers and delta > 0:
+		return
+	
+	current = max(0, current + delta)
+	valueLabel.text = str(current)
+	localState["roleCounts"][roleID] = current
+	_on_role_value_changed(roleID, current)
+	updatePlusButtons()
+
+func _on_role_value_changed(roleID: String, value: int):
 	GameManager.rpc_id(1, "updateRoleCounts", roleID, value)
