@@ -106,7 +106,7 @@ func updatePlayersInRect() -> void:
 	var selfData: Dictionary = players[selfID]
 	var selfNode: Node = preload("res://scenes/Player.tscn").instantiate()
 	playerRingContainer.add_child(selfNode)
-	var n1: String = selfData["name"]
+	var n1: String = selfData["displayName"]
 	var selfColor: Color = localState["playerColors"].get(selfID, Color.WHITE)
 	selfNode.setup(n1, selfColor, selfID, Vector2(128, 128))
 	if not selfData["alive"]:
@@ -149,7 +149,7 @@ func updatePlayersInRect() -> void:
 	for i in range(topCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
-		var n: String = data["name"]
+		var n: String = data["displayName"]
 		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node: Node = preload("res://scenes/Player.tscn").instantiate()
@@ -170,7 +170,7 @@ func updatePlayersInRect() -> void:
 	for i in range(leftCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
-		var n: String = data["name"]
+		var n: String = data["displayName"]
 		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
@@ -190,7 +190,7 @@ func updatePlayersInRect() -> void:
 	for i in range(rightCount):
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
-		var n: String = data["name"]
+		var n: String = data["displayName"]
 		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()

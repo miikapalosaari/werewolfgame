@@ -128,6 +128,21 @@ func requestFullState():
 	var peerID = multiplayer.get_remote_sender_id()
 	ClientManager.rpc_id(peerID, "updateState", buildStateSnapshot(peerID))
 
+@rpc("any_peer")
+func updateDisplayName(displayName: String):
+	if not multiplayer.is_server():
+		return
+
+	var peerID = multiplayer.get_remote_sender_id()
+	if not players.has(peerID):
+		return
+
+	players[peerID]["displayName"] = displayName
+
+	print("Updated display name for", peerID, ":", displayName)
+	broadcastState()
+
+
 # RPC : Client presses ready button
 @rpc("any_peer")
 func playerReady():
@@ -281,6 +296,8 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		var p = players[id].duplicate()
 		if not canSeeRole(peerID, id):
 			p["role"] = "hidden"
+		if not p.has("displayName") or p["displayName"] == "":
+			p["displayName"] = p["name"]
 		filteredPlayers[id] = p
 	
 	return {
@@ -292,7 +309,7 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		"roleCounts": roleCounts,
 		"selfID": peerID,
 		"nightInfo": buildNightInfoForPeer(peerID),
-		"playerColors": playerColors
+		"playerColors": playerColors,
 	}
 
 func broadcastState():

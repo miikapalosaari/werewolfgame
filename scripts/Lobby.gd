@@ -33,7 +33,7 @@ func updatePlayerList(players: Dictionary, leaderID):
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		
 		var playerLabel = Label.new()
-		playerLabel.text = data["name"]
+		playerLabel.text = data["displayName"]
 		playerLabel.add_theme_font_size_override("font_size", 36)
 		playerLabel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		playerLabel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

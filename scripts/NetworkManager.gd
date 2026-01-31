@@ -3,6 +3,7 @@ extends Node
 var maxClients: int = 20
 var peer: ENetMultiplayerPeer
 var defaultPort: int = 25566
+var pendingNickname: String = ""
 
 signal playerConnected(peerID)
 signal playerDisconnected(peerID)
@@ -11,6 +12,7 @@ func _exit_tree() -> void:
 	closeConnection()
 
 func _ready() -> void:
+	multiplayer.connected_to_server.connect(connectedToServer)
 	multiplayer.connection_failed.connect(connectionFailed)
 	multiplayer.server_disconnected.connect(serverDisconnected)
 	
@@ -55,3 +57,11 @@ func closeConnection() -> void:
 		print("Disconnecting from server...")
 		multiplayer.multiplayer_peer.disconnect_peer(1)
 		multiplayer.multiplayer_peer = null
+
+func connectedToServer() -> void:
+	print("connected to server!")
+	
+	GameManager.rpc_id(1, "updateDisplayName", pendingNickname)
+	
+	if not OS.has_feature("dedicated_server"):
+		get_tree().change_scene_to_file("res://scenes/LobbyScene.tscn")
