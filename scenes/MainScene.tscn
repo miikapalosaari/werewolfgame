@@ -74,7 +74,6 @@ theme_override_font_sizes/font_size = 32
 text = "Skip"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="BlackoutOverlay" type="ColorRect" parent="CanvasLayer"]
 offset_right = 1920.0
@@ -103,13 +102,28 @@ layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -41.0
-offset_top = 256.0
-offset_right = 41.0
-offset_bottom = 301.0
+offset_left = -82.0
+offset_top = 300.0
+offset_right = 82.0
+offset_bottom = 388.0
 grow_horizontal = 2
 theme_override_font_sizes/font_size = 64
 text = "00:00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PhaseLabel" type="Label" parent="CanvasLayer/BlackoutOverlay"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -23.5
+offset_top = 100.0
+offset_right = 23.5
+offset_bottom = 123.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 64
+text = "Phase"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -139,7 +153,7 @@ visible = false
 [node name="BackgroundRect" type="ColorRect" parent="WinnerLayer"]
 offset_right = 1920.0
 offset_bottom = 1080.0
-color = Color(0.28485, 0.28485, 0.28485, 1)
+color = Color(0, 0, 0, 1)
 
 [node name="Label" type="Label" parent="WinnerLayer/BackgroundRect"]
 layout_mode = 1

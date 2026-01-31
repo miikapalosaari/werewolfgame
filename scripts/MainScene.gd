@@ -24,6 +24,11 @@ var playerNodes: Dictionary = {}
 @onready var fadeRect: ColorRect = $FadeCanvasLayer/FadeColorRect
 @onready var currentRoleAwake: Label = $CanvasLayer/BlackoutOverlay/Label
 
+func isSelfDead() -> bool:
+	var selfID = localState.get("selfID")
+	return localState.get("players", {}).get(selfID, {}).get("alive", true) == false
+
+
 func _ready():
 	if GameManager.pendingTimerStart.size() > 0:
 		var t = GameManager.pendingTimerStart
@@ -60,29 +65,47 @@ func applyState(state: Dictionary):
 	var nightInfo = state["nightInfo"]
 	updatePlayersInRect()
 	$TopUI/PhaseLabel.text = localState["phase"]
+	$CanvasLayer/BlackoutOverlay/PhaseLabel.text = localState["phase"]
+	
+	if isSelfDead():
+		selectionMode = SelectionMode.NONE
+		isAwake = false
+		hideDayDecisionUI()
+		$CanvasLayer.visible = false
+		currentRoleAwake.text = ""
+		$TopLeftUI/RoleLabel.text = "Spectator"
+		$TopLeftUI/HintLabel.text = "You are dead. Watching the game."
+		if fadeTween:
+			fadeTween.kill()
+		fadeRect.visible = false
+		return
 	
 	match localState["phase"]:
 		"Night":
 			hideDayDecisionUI()
 			if nightInfo["youAreAwake"]:
 				showNightHint(nightInfo)
+			else:
+				$TopLeftUI/RoleLabel.text = "Your role: " + str(localState["players"][localState["selfID"]].get("role", "unknown"))
+				$TopLeftUI/HintLabel.text = ""
+				
 			if nightInfo.has("awakeRole") and nightInfo["awakeRole"] != "":
 				currentRoleAwake.text = "Role awake: " + nightInfo["awakeRole"]
 			else:
 				currentRoleAwake.text = ""
-			$TopLeftUI/RoleLabel.visible = true
-			$TopLeftUI/HintLabel.visible = true
 		"Day":
 			isAwake = true
 			selectionMode = SelectionMode.NONE
 			currentRoleAwake.text = ""
-			hideNightUI()
+			$TopLeftUI/RoleLabel.text = "Your role: " + str(localState["players"][localState["selfID"]].get("role", "unknown"))
+			$TopLeftUI/HintLabel.text = "Start vote or skip to next night"
 		"Voting":
 			isAwake = true
 			selectionMode = SelectionMode.VOTE
 			currentRoleAwake.text = ""
 			hideDayDecisionUI()
-			hideNightUI()
+			$TopLeftUI/RoleLabel.text = "Your role: " + str(localState["players"][localState["selfID"]].get("role", "unknown"))
+			$TopLeftUI/HintLabel.text = "Vote Player by clicking a player"
 
 func updatePlayersInRect() -> void:
 	# Clear previous players (except layout rectangle)
@@ -207,6 +230,9 @@ func updatePlayersInRect() -> void:
 		index += 1
 
 func onPlayerSelected(peerID: int) -> void:
+	if isSelfDead():
+		return
+	
 	if not localState["players"][peerID]["alive"]:
 		print("Cannot select dead player")
 		return
@@ -266,12 +292,6 @@ func showNightHint(nightInfo: Dictionary):
 	$TopLeftUI/RoleLabel.text = "Your role: " + str(localState["players"][selfID].get("role", "unknown"))
 	$TopLeftUI/HintLabel.text = nightInfo.get("nightActionHint", "")
 
-
-func hideNightUI():
-	$TopLeftUI/RoleLabel.visible = false
-	$TopLeftUI/HintLabel.visible = false
-
-
 @rpc("any_peer")
 func clientSendSelection():
 	print("Client: ", multiplayer.get_unique_id(), " is sending selection: ", selectedPlayers)
@@ -300,6 +320,8 @@ func clientStartSyncedTransition(server_start_msec: int, duration_msec: int, tra
 			fadeIn(remainingSeconds)
 
 func fadeOut(duration: float):
+	if isSelfDead():
+		return
 	if fadeTween:
 		fadeTween.kill()
 	
@@ -310,6 +332,8 @@ func fadeOut(duration: float):
 	fadeTween.tween_property(fadeRect, "modulate:a", 1.0, duration)
 	
 func fadeIn(duration: float):
+	if isSelfDead():
+		return
 	if fadeTween:
 		fadeTween.kill()
 		
@@ -347,6 +371,8 @@ func hideDayDecisionUI():
 
 @rpc("any_peer")
 func requestDayDecision():
+	if isSelfDead():
+		return
 	print("Client: Server requests day decision")
 	$DayDecisionsUI/StartVoteButton.visible = true
 	$DayDecisionsUI/SkipButton.visible = true
@@ -359,12 +385,14 @@ func resetUI():
 func sleepClient():
 	isAwake = false
 	selectionMode = SelectionMode.NONE
-	$CanvasLayer.visible = true
+	if not isSelfDead():
+		$CanvasLayer.visible = true
 
 func wakeClient():
 	isAwake = true
 	selectionMode = SelectionMode.NIGHT_ACTION
-	$CanvasLayer.visible = false
+	if not isSelfDead():
+		$CanvasLayer.visible = false
 
 func showGameOver(winner: String):
 	$WinnerLayer/BackgroundRect/Label.text = winner + " Won!"
