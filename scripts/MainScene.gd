@@ -107,7 +107,8 @@ func updatePlayersInRect() -> void:
 	var selfNode: Node = preload("res://scenes/Player.tscn").instantiate()
 	playerRingContainer.add_child(selfNode)
 	var n1: String = selfData["name"]
-	selfNode.setup(n1, Color.RED, selfID, Vector2(128, 128))
+	var selfColor: Color = localState["playerColors"].get(selfID, Color.WHITE)
+	selfNode.setup(n1, selfColor, selfID, Vector2(128, 128))
 	if not selfData["alive"]:
 		selfNode.setDeadVisual()
 	selfNode.connect("playerSelected", Callable(self, "onPlayerSelected"))
@@ -149,7 +150,7 @@ func updatePlayersInRect() -> void:
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
 		var n: String = data["name"]
-		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
+		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node: Node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
@@ -170,7 +171,7 @@ func updatePlayersInRect() -> void:
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
 		var n: String = data["name"]
-		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
+		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)
@@ -190,7 +191,7 @@ func updatePlayersInRect() -> void:
 		var peerID: int = otherIDs[index]
 		var data: Dictionary = players[peerID]
 		var n: String = data["name"]
-		var color: Color = Color.from_hsv(fmod(index * 0.61, 1.0), 0.75, 0.9)
+		var color: Color = localState["playerColors"].get(peerID, Color.WHITE)
 
 		var node = preload("res://scenes/Player.tscn").instantiate()
 		playerRingContainer.add_child(node)

@@ -1,5 +1,31 @@
 extends Node
 
+var colorPool: Array = [
+	Color.RED,
+	Color.BLUE,
+	Color.GREEN,
+	Color.YELLOW,
+	Color.ORANGE,
+	Color.PURPLE,
+	Color.CYAN,
+	Color.MAGENTA,
+	Color.BROWN,
+	Color.DARK_GREEN,
+	Color.DARK_BLUE,
+	Color.DARK_RED,
+	Color.PINK,
+	Color.TEAL,
+	Color.GOLD,
+	Color.SKY_BLUE,
+	Color.LIME,
+	Color.MAROON,
+	Color.NAVY_BLUE,
+	Color.GRAY
+]
+
+var availableColors: Array = []
+var playerColors: Dictionary = {}
+
 enum GamePhase {
 	LOBBY,
 	NIGHT_ROLE,
@@ -54,10 +80,25 @@ func debugPlayers(msg: String):
 func debugSelections(msg: String):
 	print("[SELECTIONS] ", msg, " | ClientSelections:", clientSelections)
 
+func initPlayerColors():
+	availableColors = colorPool.duplicate()
+	availableColors.shuffle()
+	playerColors.clear()
+
+func assignColorToPlayer(peerID: int):
+	if availableColors.is_empty():
+		print("No more colors available!")
+		return
+		
+	var color = availableColors.pop_back()
+	playerColors[peerID] = color
+	players[peerID]["color"] = color
+	print("Assigned color", color, "to", peerID)
+
 func _ready() -> void:
 	if not OS.has_feature("dedicated_server"):
 		return
-	
+	initPlayerColors()
 	NetworkManager.playerConnected.connect(onPlayerConnected)
 	NetworkManager.playerDisconnected.connect(onPlayerDisconnected)
 	print("GameManager loaded")
@@ -157,11 +198,17 @@ func onPlayerConnected(peerID) -> void:
 	
 	if lobbyLeader == -1:
 		lobbyLeader = peerID
+	assignColorToPlayer(peerID)
 	broadcastState()
 
 func onPlayerDisconnected(peerID) -> void:
 	print("Player disconnected (" + str(peerID) + ")")
 	players.erase(peerID)
+	
+	if playerColors.has(peerID):
+		var color = playerColors[peerID]
+		availableColors.append(color)
+		playerColors.erase(peerID)
 	
 	for selKey in clientSelections.keys():
 		var selDict = clientSelections[selKey]
@@ -244,7 +291,8 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		"roles": roles,
 		"roleCounts": roleCounts,
 		"selfID": peerID,
-		"nightInfo": buildNightInfoForPeer(peerID)
+		"nightInfo": buildNightInfoForPeer(peerID),
+		"playerColors": playerColors
 	}
 
 func broadcastState():
