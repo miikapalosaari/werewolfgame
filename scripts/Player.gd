@@ -1,7 +1,7 @@
 extends Node2D
 
 @onready var characterBaseRect: TextureRect = $CharacterBaseRect
-@onready var nameLabel: Label = $CharacterBaseRect/Label
+@onready var nameLabel: Label = $Label
 @onready var characterHighlightRect: TextureRect = $CharacterHighlightRect
 @onready var characterHatColorRect: TextureRect = $CharacterHatColorRect
 var peerID: int = 0
@@ -19,6 +19,11 @@ func setup(n: String, color: Color, id: int, s: Vector2):
 	setSize(s)
 	setHatColor(color)
 	setSelected(false)
+
+func setDeadVisual():
+	var dim = Color(0.50, 0.5, 0.5, 1.0)
+	characterBaseRect.modulate = dim
+	nameLabel.modulate = Color(1, 1, 1, 1)
 
 func setSize(s: Vector2):
 	characterBaseRect.size = s
@@ -39,11 +44,12 @@ func setSelected(selected: bool):
 
 func updateLabelPosition(offsetX: float):
 	nameLabel.pivot_offset = nameLabel.size * 0.5
-	var basePos = Vector2(0, characterBaseRect.size.y * 0.5 + nameLabel.size.y)
-	basePos.x -= nameLabel.size.x / 6
-	basePos.y += nameLabel.size.y * 1.5
-	basePos.x += offsetX
-	nameLabel.position = basePos
+
+	var center = Vector2(0, 0)
+	var below = center + Vector2(0, characterBaseRect.size.y * 0.5 + nameLabel.size.y)
+
+	nameLabel.position = below + Vector2(offsetX - nameLabel.size.x * 0.5, 0)
+
 
 func setFacingFromTable(direction: String):
 	var offsetX: float = 0

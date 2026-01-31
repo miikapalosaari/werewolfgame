@@ -32,13 +32,6 @@ offset_top = 511.0
 offset_right = 976.0
 offset_bottom = 534.0
 
-[node name="DebugSendVotesButton" type="Button" parent="."]
-offset_left = 1213.0
-offset_top = 689.0
-offset_right = 1221.0
-offset_bottom = 697.0
-text = "SEND VOTES"
-
 [node name="TopUI" type="VBoxContainer" parent="."]
 anchors_preset = 5
 anchor_left = 0.5
@@ -140,6 +133,5 @@ theme_override_font_sizes/font_size = 32
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 
-[connection signal="pressed" from="DebugSendVotesButton" to="." method="_on_debug_send_votes_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/StartVoteButton" to="." method="_on_start_vote_button_pressed"]
 [connection signal="pressed" from="DayDecisionsUI/SkipButton" to="." method="_on_skip_button_pressed"]
