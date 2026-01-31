@@ -22,6 +22,7 @@ var playerNodes: Dictionary = {}
 @onready var playerRingContainer: Node = $PlayerContainer
 @onready var layoutRect: Node = $PlayerContainer/LayoutRect
 @onready var fadeRect: ColorRect = $FadeCanvasLayer/FadeColorRect
+@onready var currentRoleAwake: Label = $CanvasLayer/BlackoutOverlay/Label
 
 func _ready():
 	if GameManager.pendingTimerStart.size() > 0:
@@ -50,24 +51,38 @@ func _process(delta):
 
 	if formatted != lastDisplayedTime:
 		$TopUI/TimerLabel.text = formatted
+		$CanvasLayer/BlackoutOverlay/TimerLabel.text = formatted
 		lastDisplayedTime = formatted
 
 func applyState(state: Dictionary):
 	print("Applying game state:\n", JSON.stringify(state, "\t", 2))
 	localState = state
+	var nightInfo = state["nightInfo"]
 	updatePlayersInRect()
 	$TopUI/PhaseLabel.text = localState["phase"]
 	
 	match localState["phase"]:
 		"Night":
 			hideDayDecisionUI()
+			if nightInfo["youAreAwake"]:
+				showNightHint(nightInfo)
+			if nightInfo.has("awakeRole") and nightInfo["awakeRole"] != "":
+				currentRoleAwake.text = "Role awake: " + nightInfo["awakeRole"]
+			else:
+				currentRoleAwake.text = ""
+			$TopLeftUI/RoleLabel.visible = true
+			$TopLeftUI/HintLabel.visible = true
 		"Day":
 			isAwake = true
 			selectionMode = SelectionMode.NONE
+			currentRoleAwake.text = ""
+			hideNightUI()
 		"Voting":
 			isAwake = true
 			selectionMode = SelectionMode.VOTE
+			currentRoleAwake.text = ""
 			hideDayDecisionUI()
+			hideNightUI()
 
 func updatePlayersInRect() -> void:
 	# Clear previous players (except layout rectangle)
@@ -250,6 +265,21 @@ func updatePlayerHighlights():
 		var pid = selectedPlayers[key]
 		if playerNodes.has(pid):
 			playerNodes[pid].setSelected(true)
+
+func showNightHint(nightInfo: Dictionary):
+	var selfID = localState.get("selfID", null)
+	if selfID == null or not localState.get("players", {}).has(selfID):
+		$TopLeftUI/RoleLabel.text = "Your role: unknown"
+		$TopLeftUI/HintLabel.text = nightInfo.get("nightActionHint", "")
+		return
+
+	$TopLeftUI/RoleLabel.text = "Your role: " + str(localState["players"][selfID].get("role", "unknown"))
+	$TopLeftUI/HintLabel.text = nightInfo.get("nightActionHint", "")
+
+
+func hideNightUI():
+	$TopLeftUI/RoleLabel.visible = false
+	$TopLeftUI/HintLabel.visible = false
 
 
 @rpc("any_peer")

@@ -40,8 +40,10 @@ var nightOrder: Array = []
 var currentNightActorIndex: int = 0
 var mainScenesLoaded: Dictionary = {}
 var transitionTimer: Timer
-#var nextPhase: GamePhase
 var phaseLocked: bool = false
+var currentNightRole: String = ""
+var alivePlayersWithRole: Array = []
+
 
 func debugPhase(msg: String):
 	print("[PHASE] ", msg, " | CurrentPhase:", getCurrentPhaseString(), " | Round:", currentRound)
@@ -161,6 +163,17 @@ func onPlayerDisconnected(peerID) -> void:
 	print("Player disconnected (" + str(peerID) + ")")
 	players.erase(peerID)
 	
+	for selKey in clientSelections.keys():
+		var selDict = clientSelections[selKey]
+		var keysToErase = []
+		for k in selDict.keys():
+			if selDict[k] == peerID:
+				keysToErase.append(k)
+		for k in keysToErase:
+			selDict.erase(k)
+
+	clientSelections.erase(peerID)
+	
 	if peerID == lobbyLeader:
 		lobbyLeader = pickNewLeader()
 		
@@ -196,6 +209,25 @@ func canSeeRole(viewerID: int, targetID: int) -> bool:
 		
 	return viewerData.get("team", "") == targetData.get("team", "")
 
+func buildNightInfoForPeer(peerID):
+	if currentPhase != GamePhase.NIGHT_ROLE:
+		return {
+			"awakeRole": "",
+			"youAreAwake": false,
+			"nightActionHint": ""
+		}
+
+	var hint := ""
+	if roles.has(currentNightRole):
+		hint = roles[currentNightRole].get("nightActionHint", "")
+
+	return {
+		"awakeRole": currentNightRole,
+		"youAreAwake": alivePlayersWithRole.has(peerID),
+		"nightActionHint": hint
+	}
+
+
 func buildStateSnapshot(peerID: int) -> Dictionary:
 	var filteredPlayers: Dictionary = {}
 	for id in players.keys():
@@ -211,7 +243,8 @@ func buildStateSnapshot(peerID: int) -> Dictionary:
 		"leader": lobbyLeader,
 		"roles": roles,
 		"roleCounts": roleCounts,
-		"selfID": peerID
+		"selfID": peerID,
+		"nightInfo": buildNightInfoForPeer(peerID)
 	}
 
 func broadcastState():
@@ -505,19 +538,20 @@ func startNextNightRole():
 		return
 
 	broadcastState()
-	var roleID = nightOrder[currentNightActorIndex]
-	var alivePlayersWithRole := []
+	currentNightRole = nightOrder[currentNightActorIndex]
+	alivePlayersWithRole.clear()
 	for peerID in players.keys():
-		if players[peerID]["alive"] and players[peerID]["role"] == roleID:
+		if players[peerID]["alive"] and players[peerID]["role"] == currentNightRole:
 			alivePlayersWithRole.append(peerID)
 
 	if alivePlayersWithRole.is_empty():
-		print("[NIGHT] Skipping role ", roleID, "- no assigned or alive players")
+		print("[NIGHT] Skipping role ", currentNightRole, "- no assigned or alive players")
 		currentNightActorIndex += 1
 		startNextNightRole()
 		return
 
-	debugPhase("Next night role: " + roleID)
+	debugPhase("Next night role: " + currentNightRole)
+	broadcastState()
 
 	# Put everyone to sleep
 	for peerID in players.keys():
