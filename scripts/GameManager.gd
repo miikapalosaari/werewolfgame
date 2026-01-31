@@ -135,14 +135,14 @@ func clientStartGame():
 	get_tree().change_scene_to_file("res://scenes/MainScene.tscn")
 
 @rpc("any_peer")
-func updateRoleCounts(newCounts: Dictionary):
+func updateRoleCounts(roleID: String, value: int):
 	if not multiplayer.is_server():
 		return
 	if multiplayer.get_remote_sender_id() != lobbyLeader:
 		print("Only lobby leader can update role counts")
 		return
 
-	roleCounts = newCounts
+	roleCounts[roleID] = value
 	print("Updated role counts:", roleCounts)
 	broadcastState()
 

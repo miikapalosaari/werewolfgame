@@ -31,87 +31,66 @@ texture = ExtResource("2_681bj")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 14
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = 612.0
-offset_top = -100.0
-offset_right = 668.0
-offset_bottom = -69.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = 420.0
+offset_top = -240.0
+offset_right = 660.0
+offset_bottom = -130.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
 [node name="ReadyButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 4
+theme_override_font_sizes/font_size = 32
 text = "Ready"
-
-[node name="ApplySettingsButton" type="Button" parent="VBoxContainer"]
-layout_mode = 2
-text = "Apply Settings"
 
 [node name="Panel" type="Panel" parent="."]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -256.0
-offset_top = -128.0
-offset_right = 384.0
-offset_bottom = 128.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_left = -320.0
+offset_top = -240.0
+offset_right = 320.0
+offset_bottom = 240.0
 
 [node name="Label" type="Label" parent="Panel"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -68.0
-offset_top = -50.0
-offset_right = 68.0
-grow_horizontal = 2
-size_flags_horizontal = 4
-size_flags_vertical = 0
-theme_override_font_sizes/font_size = 36
-text = "Players:"
+layout_mode = 0
+offset_left = 220.0
+offset_top = -90.0
+offset_right = 460.0
+theme_override_font_sizes/font_size = 64
+text = "Players"
 horizontal_alignment = 1
+vertical_alignment = 1
 
-[node name="PlayersContainer" type="VBoxContainer" parent="Panel"]
-custom_minimum_size = Vector2(640, 256)
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel"]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -128.0
-offset_right = 320.0
-offset_bottom = 128.0
-grow_horizontal = 2
-grow_vertical = 2
+offset_right = 640.0
+offset_bottom = 480.0
+horizontal_scroll_mode = 0
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/PlayersContainer"]
-clip_contents = false
-layout_mode = 2
-
-[node name="PlayerList" type="VBoxContainer" parent="Panel/PlayersContainer/ScrollContainer"]
-custom_minimum_size = Vector2(640, 196)
+[node name="PlayerList" type="VBoxContainer" parent="Panel/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="RoleSettingsContainer" type="VBoxContainer" parent="."]
+[node name="RolePanel" type="Panel" parent="."]
 layout_mode = 0
-offset_left = 572.0
-offset_top = 53.0
-offset_right = 612.0
-offset_bottom = 93.0
+offset_left = 420.0
+offset_right = 660.0
+offset_bottom = 240.0
+
+[node name="Label" type="Label" parent="RolePanel"]
+layout_mode = 0
+offset_left = 50.0
+offset_top = -50.0
+offset_right = 180.0
+theme_override_font_sizes/font_size = 32
+text = "Settings"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RoleSettingsContainer" type="VBoxContainer" parent="RolePanel"]
+layout_mode = 1
+offset_right = 240.0
+offset_bottom = 240.0
 
 [connection signal="pressed" from="VBoxContainer/ReadyButton" to="." method="_on_ready_button_pressed"]
-[connection signal="pressed" from="VBoxContainer/ApplySettingsButton" to="." method="_on_apply_settings_button_pressed"]

@@ -1,7 +1,7 @@
 extends Control
 
-@onready var playerList = $Panel/PlayersContainer/ScrollContainer/PlayerList
-@onready var roleSettings = $RoleSettingsContainer
+@onready var playerList = $Panel/ScrollContainer/PlayerList
+@onready var roleSettings = $RolePanel/RoleSettingsContainer
 var localState: Dictionary = {}
 
 func _ready() -> void:
@@ -24,6 +24,7 @@ func updatePlayerList(players: Dictionary, leader_id):
 	for id in players.keys():
 		var data = players[id]
 		var label = Label.new()
+		label.custom_minimum_size.y = 40
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 36)
@@ -43,6 +44,10 @@ func buildRoleSettingsUI(roles: Dictionary):
 		child.queue_free()
 
 	var counts = localState.get("roleCounts", {})
+	var leaderID = localState.get("leader")
+	var selfID = localState.get("selfID")
+	
+	var iAmLeader = (selfID == leaderID)
 
 	for roleID in roles.keys():
 		var row = HBoxContainer.new()
@@ -51,26 +56,25 @@ func buildRoleSettingsUI(roles: Dictionary):
 		var label = Label.new()
 		label.text = roleID
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-
-		var input = SpinBox.new()
-		input.min_value = 0
-		input.max_value = 20
-		input.name = roleID
-
-		# Use server value if available
-		input.value = counts.get(roleID, 0)
-
 		row.add_child(label)
-		row.add_child(input)
+
+		if iAmLeader:
+			var input = SpinBox.new()
+			input.min_value = 0
+			input.max_value = 20
+			input.name = roleID
+			input.value = counts.get(roleID, 0)
+			input.connect("value_changed", Callable(self, "_on_spinbox_value_changed").bind(roleID))
+			row.add_child(input)
+		else:
+			var valueLabel = Label.new()
+			valueLabel.text = str(counts.get(roleID, 0))
+			valueLabel.size_flags_horizontal = Control.SIZE_FILL
+			row.add_child(valueLabel)
 		roleSettings.add_child(row)
 
 func _on_ready_button_pressed() -> void:
 	GameManager.rpc_id(1, "playerReady")
 
-func _on_apply_settings_button_pressed() -> void:
-	var newCounts: Dictionary = {}
-	for row in roleSettings.get_children():
-		var inputNode = row.get_child(1)  # SpinBox is second child
-		var roleID = inputNode.name
-		newCounts[roleID] = int(inputNode.value)
-	GameManager.rpc_id(1, "updateRoleCounts", newCounts)
+func _on_spinbox_value_changed(value, roleID):
+	GameManager.rpc_id(1, "updateRoleCounts", roleID, value)
